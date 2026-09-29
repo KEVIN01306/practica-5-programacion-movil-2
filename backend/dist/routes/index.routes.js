@@ -6,6 +6,8 @@ import AuditRoutes from "../modules/Audit/presentation/audit.routes.js";
 import BrandsRoutes from "../modules/Brands/presentation/brands.routes.js";
 import FoldersRoutes from "../modules/Folders/presentation/folders.routes.js";
 import AssetsRoutes from "../modules/Assets/presentation/assets.routes.js";
+import RolesRoutes from "../modules/Roles/presentation/roles.routes.js";
+import PermissionsRoutes from "../modules/Roles/presentation/permissions.routes.js";
 const router = Router();
 router.use('/auth', AuthRoutes);
 router.use('/users', UsersRoutes);
@@ -14,6 +16,8 @@ router.use('/audit-logs', AuditRoutes);
 router.use('/brands', BrandsRoutes);
 router.use('/folders', FoldersRoutes);
 router.use('/assets', AssetsRoutes);
+router.use('/roles', RolesRoutes);
+router.use('/permissions', PermissionsRoutes);
 router.use(ErrorMiddleware);
 export default router;
 //# sourceMappingURL=index.routes.js.map

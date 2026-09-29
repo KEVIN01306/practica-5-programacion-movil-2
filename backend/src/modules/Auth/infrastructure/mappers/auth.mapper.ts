@@ -15,7 +15,8 @@ export class AuthMapper {
             roles: user.userRoles?.map((ur: any) => ur.role?.name) || [],
             permissions: user.userRoles?.flatMap((ur: any) => 
                 ur.role?.rolePermissions?.map((rp: any) => rp.permission?.action) || []
-            ) || []
+            ) || [],
+            createdAt: user.createdAt,
         };
     }
 }

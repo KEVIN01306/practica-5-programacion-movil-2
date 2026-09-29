@@ -5,6 +5,7 @@ import {
     GroupOutlined,
     AdminPanelSettingsOutlined,
     ManageHistoryOutlined,
+    ShieldOutlined,
 } from '@mui/icons-material';
 import type { ElementType } from 'react';
 
@@ -44,13 +45,20 @@ const MenuItems: MenuItem[] = [
         permissions: ['folders:read'],
     },
 
-    { group: 'Administration', permissions: ['users:read', 'audit:read'] },
+    { group: 'Administration', permissions: ['users:read', 'roles:read', 'audit:read'] },
     {
         module: 'Users',
         name: 'Users Management',
         icon: GroupOutlined,
         link: '/users',
         permissions: ['users:read'],
+    },
+    {
+        module: 'Roles',
+        name: 'Roles & Permissions',
+        icon: ShieldOutlined,
+        link: '/roles',
+        permissions: ['roles:read'],
     },
     {
         module: 'Audit',

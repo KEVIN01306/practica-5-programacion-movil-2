@@ -1,0 +1,1 @@
+{"version":3,"file":"list-permissions.usecase.js","sourceRoot":"","sources":["../../../../src/modules/Roles/application/list-permissions.usecase.ts"],"names":[],"mappings":"AAGA,MAAM,OAAO,sBAAsB;IACF;IAA7B,YAA6B,eAAgC;QAAhC,oBAAe,GAAf,eAAe,CAAiB;IAAG,CAAC;IAEjE,KAAK,CAAC,OAAO;QACT,OAAO,IAAI,CAAC,eAAe,CAAC,kBAAkB,EAAE,CAAC;IACrD,CAAC;CACJ"}

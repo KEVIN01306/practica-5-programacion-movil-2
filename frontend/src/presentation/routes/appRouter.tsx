@@ -6,6 +6,7 @@ import { directoriosRoutes } from '../../modules/directorios/presentation/direct
 import { usersRoutes } from '../../modules/users/presentation/users.routes';
 import { profileRoutes } from '../../modules/profile/presentation/profile.routes';
 import { auditRoutes } from '../../modules/audit/presentation/audit.routes';
+import { rolesRoutes } from '../../modules/roles/presentation/roles.routes';
 import ProtectedRoute from './ProtectedRoute';
 
 import { FullPageLoader } from '../../shared/components/loaders';
@@ -71,6 +72,10 @@ export const appRouter = createBrowserRouter([
                     {
                         path: 'audit-logs',
                         children: [...auditRoutes],
+                    },
+                    {
+                        path: 'roles',
+                        children: [...rolesRoutes],
                     },
                     {
                         path: 'profile',

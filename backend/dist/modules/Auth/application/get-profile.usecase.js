@@ -12,9 +12,13 @@ export class GetProfileUseCase {
         return {
             id: user.id,
             name: `${user.firstName} ${user.lastName}`.trim(),
+            firstName: user.firstName,
+            lastName: user.lastName,
             email: user.email,
             roles: user.roles,
             permissions: user.permissions,
+            isActive: user.isActive,
+            createdAt: user.createdAt,
         };
     }
 }

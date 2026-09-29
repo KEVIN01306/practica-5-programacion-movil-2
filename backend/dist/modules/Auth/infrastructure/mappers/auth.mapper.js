@@ -8,7 +8,8 @@ export class AuthMapper {
             passwordHash: user.passwordHash,
             isActive: user.isActive,
             roles: user.userRoles?.map((ur) => ur.role?.name) || [],
-            permissions: user.userRoles?.flatMap((ur) => ur.role?.rolePermissions?.map((rp) => rp.permission?.action) || []) || []
+            permissions: user.userRoles?.flatMap((ur) => ur.role?.rolePermissions?.map((rp) => rp.permission?.action) || []) || [],
+            createdAt: user.createdAt,
         };
     }
 }

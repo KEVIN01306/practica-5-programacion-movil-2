@@ -1,0 +1,1 @@
+{"version":3,"file":"get-permissions-matrix.usecase.js","sourceRoot":"","sources":["../../../../src/modules/Roles/application/get-permissions-matrix.usecase.ts"],"names":[],"mappings":"AAGA,MAAM,OAAO,2BAA2B;IACP;IAA7B,YAA6B,eAAgC;QAAhC,oBAAe,GAAf,eAAe,CAAiB;IAAG,CAAC;IAEjE,KAAK,CAAC,OAAO;QACT,OAAO,IAAI,CAAC,eAAe,CAAC,oBAAoB,EAAE,CAAC;IACvD,CAAC;CACJ"}

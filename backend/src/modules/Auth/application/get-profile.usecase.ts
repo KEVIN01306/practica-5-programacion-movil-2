@@ -4,9 +4,13 @@ import type { AuthRepository } from "../domain/auth.repository.js";
 interface GetProfileResponse {
     id: string;
     name: string;
+    firstName: string;
+    lastName: string;
     email: string;
     roles: string[];
     permissions: string[];
+    isActive: boolean;
+    createdAt?: Date;
 }
 
 export class GetProfileUseCase {
@@ -24,9 +28,14 @@ export class GetProfileUseCase {
         return {
             id: user.id,
             name: `${user.firstName} ${user.lastName}`.trim(),
+            firstName: user.firstName,
+            lastName: user.lastName,
             email: user.email,
             roles: user.roles,
             permissions: user.permissions,
+            isActive: user.isActive,
+            createdAt: user.createdAt,
         }
     }
 }
+

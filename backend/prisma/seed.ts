@@ -93,6 +93,11 @@ async function main() {
         { action: 'assets:update', description: 'Update assets' },
         { action: 'assets:delete', description: 'Delete assets' },
         { action: 'audit:read', description: 'Read audit logs' },
+        { action: 'roles:create', description: 'Create roles' },
+        { action: 'roles:read', description: 'Read roles' },
+        { action: 'roles:update', description: 'Update roles' },
+        { action: 'roles:delete', description: 'Delete roles' },
+        { action: 'roles:permissions:update', description: 'Assign permissions to roles' },
     ];
 
 

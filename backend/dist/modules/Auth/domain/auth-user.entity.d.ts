@@ -7,5 +7,6 @@ export interface AuthUser {
     isActive: boolean;
     permissions: string[];
     roles: string[];
+    createdAt?: Date;
 }
 //# sourceMappingURL=auth-user.entity.d.ts.map

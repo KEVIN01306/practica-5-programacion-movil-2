@@ -74,6 +74,8 @@ const getResourceIcon = (resource: string) => {
             return <Folder fontSize="small" sx={{ color: '#d97706' }} />;
         case 'asset':
             return <Storage fontSize="small" sx={{ color: '#7c3aed' }} />;
+        case 'role':
+            return <Security fontSize="small" sx={{ color: '#4f46e5' }} />;
         default:
             return <Storage fontSize="small" sx={{ color: '#64748b' }} />;
     }
@@ -108,7 +110,24 @@ export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
     const actionColors = getActionColor(log.action);
     const details = log.details || {};
 
-    const changes = details.changes as Record<string, { from: any; to: any }> | undefined;
+    const rawChanges = details.changes as Record<string, any> | undefined;
+    const addedPermissions = (rawChanges?.addedPermissions || details.addedPermissions) as string[] | undefined;
+    const removedPermissions = (rawChanges?.removedPermissions || details.removedPermissions) as string[] | undefined;
+    const hasPermissionChanges = Boolean(
+        (Array.isArray(addedPermissions) && addedPermissions.length > 0) ||
+        (Array.isArray(removedPermissions) && removedPermissions.length > 0)
+    );
+
+    // Filter out array-type metadata keys from generic {from, to} changes table
+    const fieldChanges = rawChanges
+        ? Object.entries(rawChanges).reduce((acc, [k, v]) => {
+              if (k !== 'addedPermissions' && k !== 'removedPermissions' && v && typeof v === 'object' && 'from' in v) {
+                  acc[k] = v;
+              }
+              return acc;
+          }, {} as Record<string, { from: any; to: any }>)
+        : {};
+
     const deletedState = details.deleted as Record<string, any> | undefined;
     const fileReplaced = details.file as {
         oldFileName?: string;
@@ -372,8 +391,97 @@ export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
                         </Paper>
                     )}
 
-                    {/* 4. Changes Diff Table (for UPDATE) */}
-                    {changes && Object.keys(changes).length > 0 && (
+                    {/* 4. Role Permissions Diff Section */}
+                    {hasPermissionChanges && (
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                borderColor: '#c7d2fe',
+                                backgroundColor: '#f8faff',
+                                borderRadius: 2,
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Security fontSize="small" sx={{ color: '#4f46e5' }} />
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#312e81' }}>
+                                        Actualización de Permisos del Rol {details.roleName ? `(${details.roleName})` : ''}
+                                    </Typography>
+                                </Box>
+                                <Chip
+                                    label={`${addedPermissions?.length || 0} agregados • ${removedPermissions?.length || 0} revocados`}
+                                    size="small"
+                                    sx={{ fontSize: '11px', fontWeight: 600, bgcolor: '#e0e7ff', color: '#3730a3' }}
+                                />
+                            </Box>
+
+                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                                {/* Added Permissions */}
+                                <Box sx={{ p: 1.5, backgroundColor: '#ffffff', borderRadius: 1.5, border: '1px solid #bbf7d0' }}>
+                                    <Typography variant="caption" sx={{ color: '#15803d', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                        <Check sx={{ fontSize: 15 }} /> Permisos Agregados ({addedPermissions?.length || 0})
+                                    </Typography>
+                                    {addedPermissions && addedPermissions.length > 0 ? (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                            {addedPermissions.map((perm) => (
+                                                <Chip
+                                                    key={perm}
+                                                    label={`✓ ${perm}`}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: '#ecfdf5',
+                                                        color: '#047857',
+                                                        border: '1px solid #a7f3d0',
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '11px',
+                                                        fontWeight: 600,
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                                            Ninguno
+                                        </Typography>
+                                    )}
+                                </Box>
+
+                                {/* Removed Permissions */}
+                                <Box sx={{ p: 1.5, backgroundColor: '#ffffff', borderRadius: 1.5, border: '1px solid #fecaca' }}>
+                                    <Typography variant="caption" sx={{ color: '#b91c1c', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                        <Close sx={{ fontSize: 15 }} /> Permisos Revocados ({removedPermissions?.length || 0})
+                                    </Typography>
+                                    {removedPermissions && removedPermissions.length > 0 ? (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                            {removedPermissions.map((perm) => (
+                                                <Chip
+                                                    key={perm}
+                                                    label={`✕ ${perm}`}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: '#fef2f2',
+                                                        color: '#b91c1c',
+                                                        border: '1px solid #fecaca',
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '11px',
+                                                        fontWeight: 600,
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                                            Ninguno
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        </Paper>
+                    )}
+
+                    {/* 5. Changes Diff Table (for standard field updates) */}
+                    {Object.keys(fieldChanges).length > 0 && (
                         <Paper variant="outlined" sx={{ borderColor: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
                             <Box sx={{ p: 1.5, backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <CompareArrows fontSize="small" sx={{ color: '#0284c7' }} />
@@ -391,7 +499,7 @@ export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {Object.entries(changes).map(([field, diff]) => (
+                                        {Object.entries(fieldChanges).map(([field, diff]) => (
                                             <TableRow key={field} hover>
                                                 <TableCell sx={{ fontWeight: 600, fontFamily: 'monospace', color: '#334155' }}>
                                                     {field}
