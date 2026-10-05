@@ -62,7 +62,7 @@ export class AuthMiddleware {
         };
     };
 
-    public checkPermission = (permissions: string[]) => {
+    public checkPermission = (permissions: string | string[]) => {
         return (req: Request, res: Response, next: NextFunction) => {
             const user = (req as any).user;
 
@@ -74,11 +74,12 @@ export class AuthMiddleware {
                 return next();
             }
 
-            if (!user.permissions) {
+            if (!user.permissions || !Array.isArray(user.permissions)) {
                 return next(new AppError("Not authorized to perform this action", "FORBIDDEN", 403));
             }
 
-            const hasAllPermissions = permissions.every((permission) =>
+            const permList = Array.isArray(permissions) ? permissions : [permissions];
+            const hasAllPermissions = permList.every((permission) =>
                 user.permissions.includes(permission)
             );
 
@@ -90,8 +91,7 @@ export class AuthMiddleware {
         };
     };
 
-
-    public checkPermissionSome = (permissions: string[]) => {
+    public checkPermissionSome = (permissions: string | string[]) => {
         return (req: Request, res: Response, next: NextFunction) => {
             const user = (req as any).user;
 
@@ -103,11 +103,12 @@ export class AuthMiddleware {
                 return next();
             }
 
-            if (!user.permissions) {
+            if (!user.permissions || !Array.isArray(user.permissions)) {
                 return next(new AppError("Not authorized to perform this action", "FORBIDDEN", 403));
             }
 
-            const hasSomePermissions = permissions.some((permission) =>
+            const permList = Array.isArray(permissions) ? permissions : [permissions];
+            const hasSomePermissions = permList.some((permission) =>
                 user.permissions.includes(permission)
             );
 

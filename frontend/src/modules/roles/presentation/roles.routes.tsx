@@ -6,7 +6,7 @@ export const rolesRoutes: RouteObject[] = [
     {
         index: true,
         element: (
-            <RouteProtector requiredPermission="roles:read">
+            <RouteProtector requiredPermission={['roles:read', 'roles:permissions:update']}>
                 <RolesManagementPage />
             </RouteProtector>
         ),

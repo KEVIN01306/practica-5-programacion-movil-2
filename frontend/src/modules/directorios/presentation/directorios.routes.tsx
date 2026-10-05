@@ -6,7 +6,7 @@ export const directoriosRoutes: RouteObject[] = [
     {
         index: true,
         element: (
-            <RouteProtector requiredPermission='read:folders'>
+            <RouteProtector requiredPermission={['folders:read', 'assets:read', 'brands:read']}>
                 <DirectoriosIndexPage />
             </RouteProtector>
         ),

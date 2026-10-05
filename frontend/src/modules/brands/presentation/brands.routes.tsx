@@ -6,7 +6,7 @@ export const brandsRoutes: RouteObject[] = [
     {
         index: true,
         element: (
-            <RouteProtector requiredPermission='read:brands'>
+            <RouteProtector requiredPermission="brands:read">
                 <BrandsListPage />
             </RouteProtector>
         ),
@@ -14,7 +14,7 @@ export const brandsRoutes: RouteObject[] = [
     {
         path: ':id',
         element: (
-            <RouteProtector requiredPermission='read:brands'>
+            <RouteProtector requiredPermission="brands:read">
                 <BrandDetailPage />
             </RouteProtector>
         ),

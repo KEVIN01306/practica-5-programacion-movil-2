@@ -29,7 +29,7 @@ const MenuItems: MenuItem[] = [
         link: '/',
     },
 
-    { group: 'Asset Management', permissions: ['brands:read', 'folders:read'] },
+    { group: 'Asset Management', permissions: ['brands:read', 'folders:read', 'assets:read'] },
     {
         module: 'Catalog',
         name: 'Brands',
@@ -42,10 +42,10 @@ const MenuItems: MenuItem[] = [
         name: 'Directories Tree',
         icon: FolderOutlined,
         link: '/directorios',
-        permissions: ['folders:read'],
+        permissions: ['folders:read', 'assets:read', 'brands:read'],
     },
 
-    { group: 'Administration', permissions: ['users:read', 'roles:read', 'audit:read'] },
+    { group: 'Administration', permissions: ['users:read', 'roles:read', 'audit:read', 'roles:permissions:update'] },
     {
         module: 'Users',
         name: 'Users Management',
@@ -58,7 +58,7 @@ const MenuItems: MenuItem[] = [
         name: 'Roles & Permissions',
         icon: ShieldOutlined,
         link: '/roles',
-        permissions: ['roles:read'],
+        permissions: ['roles:read', 'roles:permissions:update'],
     },
     {
         module: 'Audit',

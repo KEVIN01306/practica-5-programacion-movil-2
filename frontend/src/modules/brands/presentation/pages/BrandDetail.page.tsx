@@ -14,12 +14,16 @@ import {
 import { ArrowBack, Folder, Edit, Category } from '@mui/icons-material';
 import { PageHeader } from '../../../../shared/components/common/PageHeader';
 import BrandFormDialog from '../components/BrandFormDialog';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission } from '../../../../core/utils/permissions';
 import { getBrandById } from '../../infrastructure/services/brands.service';
 import type { BrandDto } from '../../domain/dto/brands.dto';
 
 export const BrandDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const user = useAuthStore((state) => state.user);
+    const canUpdate = hasPermission(user, 'brands:update');
 
     const [brand, setBrand] = useState<BrandDto | null>(null);
     const [loading, setLoading] = useState(true);
@@ -84,17 +88,19 @@ export const BrandDetailPage: React.FC = () => {
                 >
                     Back
                 </Button>
-                <Button
-                    variant="contained"
-                    startIcon={<Edit />}
-                    onClick={() => setEditDialogOpen(true)}
-                    sx={{
-                        borderRadius: '10px',
-                        textTransform: 'none',
-                    }}
-                >
-                    Edit Brand
-                </Button>
+                {canUpdate && (
+                    <Button
+                        variant="contained"
+                        startIcon={<Edit />}
+                        onClick={() => setEditDialogOpen(true)}
+                        sx={{
+                            borderRadius: '10px',
+                            textTransform: 'none',
+                        }}
+                    >
+                        Edit Brand
+                    </Button>
+                )}
             </PageHeader>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>

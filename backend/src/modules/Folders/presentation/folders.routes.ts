@@ -11,10 +11,39 @@ const validatedMiddleware = new ValidatedMiddleware();
 // Protect all folder routes - require authentication
 router.use(authMiddleware.routeProtect);
 
-router.get("/", foldersController.list);
-router.get("/:id", validatedMiddleware.validateParams(FolderIdSchema), foldersController.getById);
-router.post("/", validatedMiddleware.validateBody(CreateFolderSchema), foldersController.create);
-router.put("/:id", validatedMiddleware.validateParams(FolderIdSchema), validatedMiddleware.validateBody(UpdateFolderSchema), foldersController.update);
-router.delete("/:id", validatedMiddleware.validateParams(FolderIdSchema), foldersController.delete);
+router.get(
+    "/",
+    authMiddleware.checkPermissionSome(["folders:read", "assets:read", "brands:read"]),
+    foldersController.list
+);
+
+router.get(
+    "/:id",
+    authMiddleware.checkPermissionSome(["folders:read", "assets:read", "brands:read"]),
+    validatedMiddleware.validateParams(FolderIdSchema),
+    foldersController.getById
+);
+
+router.post(
+    "/",
+    authMiddleware.checkPermission("folders:create"),
+    validatedMiddleware.validateBody(CreateFolderSchema),
+    foldersController.create
+);
+
+router.put(
+    "/:id",
+    authMiddleware.checkPermission("folders:update"),
+    validatedMiddleware.validateParams(FolderIdSchema),
+    validatedMiddleware.validateBody(UpdateFolderSchema),
+    foldersController.update
+);
+
+router.delete(
+    "/:id",
+    authMiddleware.checkPermission("folders:delete"),
+    validatedMiddleware.validateParams(FolderIdSchema),
+    foldersController.delete
+);
 
 export default router;

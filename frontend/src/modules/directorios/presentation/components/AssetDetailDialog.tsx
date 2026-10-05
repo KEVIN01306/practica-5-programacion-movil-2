@@ -22,6 +22,8 @@ import {
     ContentCopy,
     InsertDriveFile,
 } from '@mui/icons-material';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission } from '../../../../core/utils/permissions';
 import type { AssetDto } from '../../domain/dto/assets.dto';
 
 interface AssetDetailDialogProps {
@@ -41,6 +43,10 @@ export const AssetDetailDialog: React.FC<AssetDetailDialogProps> = ({
     onReplace,
     onDelete,
 }) => {
+    const user = useAuthStore((state) => state.user);
+    const canUpdate = hasPermission(user, 'assets:update');
+    const canDelete = hasPermission(user, 'assets:delete');
+
     if (!asset) return null;
 
     const formatBytes = (bytes: number) => {
@@ -276,32 +282,40 @@ export const AssetDetailDialog: React.FC<AssetDetailDialogProps> = ({
             </DialogContent>
 
             <DialogActions sx={{ px: 3, pb: 2, pt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                <Button
-                    color="error"
-                    startIcon={<Delete />}
-                    onClick={() => onDelete(asset)}
-                    sx={{ textTransform: 'none', borderRadius: '10px' }}
-                >
-                    Delete Asset
-                </Button>
+                <Box>
+                    {canDelete && (
+                        <Button
+                            color="error"
+                            startIcon={<Delete />}
+                            onClick={() => onDelete(asset)}
+                            sx={{ textTransform: 'none', borderRadius: '10px' }}
+                        >
+                            Delete Asset
+                        </Button>
+                    )}
+                </Box>
 
                 <Stack direction="row" spacing={1.5}>
-                    <Button
-                        variant="outlined"
-                        startIcon={<SwapHoriz />}
-                        onClick={() => onReplace(asset)}
-                        sx={{ textTransform: 'none', borderRadius: '10px' }}
-                    >
-                        Replace File
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<Edit />}
-                        onClick={() => onEdit(asset)}
-                        sx={{ textTransform: 'none', borderRadius: '10px' }}
-                    >
-                        Edit Details
-                    </Button>
+                    {canUpdate && (
+                        <>
+                            <Button
+                                variant="outlined"
+                                startIcon={<SwapHoriz />}
+                                onClick={() => onReplace(asset)}
+                                sx={{ textTransform: 'none', borderRadius: '10px' }}
+                            >
+                                Replace File
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<Edit />}
+                                onClick={() => onEdit(asset)}
+                                sx={{ textTransform: 'none', borderRadius: '10px' }}
+                            >
+                                Edit Details
+                            </Button>
+                        </>
+                    )}
                 </Stack>
             </DialogActions>
         </Dialog>

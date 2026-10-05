@@ -47,6 +47,8 @@ import {
     deleteAsset,
 } from '../../infrastructure/services/assets.service';
 import { getBrandById } from '../../../brands/infrastructure/services/brands.service';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission } from '../../../../core/utils/permissions';
 import type { FolderDto, FolderBreadcrumbItem } from '../../domain/dto/folders.dto';
 import type { BrandDto } from '../../../brands/domain/dto/brands.dto';
 import type { AssetDto } from '../../domain/dto/assets.dto';
@@ -65,6 +67,14 @@ export interface DirectoryItem {
 export const FoldersBrowserPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+    const user = useAuthStore((state) => state.user);
+
+    const canCreateFolder = hasPermission(user, 'folders:create');
+    const canUpdateFolder = hasPermission(user, 'folders:update');
+    const canDeleteFolder = hasPermission(user, 'folders:delete');
+    const canCreateAsset = hasPermission(user, 'assets:create');
+    const canUpdateAsset = hasPermission(user, 'assets:update');
+    const canDeleteAsset = hasPermission(user, 'assets:delete');
 
     const brandId = searchParams.get('brandId');
     const parentId = searchParams.get('parentId') || null;
@@ -564,12 +574,13 @@ export const FoldersBrowserPage: React.FC = () => {
         {
             name: 'Replace File',
             icon: <SwapHoriz fontSize="small" />,
-            visible: (row: DirectoryItem) => row.itemType === 'ASSET',
+            visible: (row: DirectoryItem) => row.itemType === 'ASSET' && canUpdateAsset,
             onClick: (row: DirectoryItem) => setReplaceAsset(row.assetData!),
         },
         {
             name: 'Edit',
             icon: <Edit fontSize="small" />,
+            visible: (row: DirectoryItem) => (row.itemType === 'FOLDER' ? canUpdateFolder : canUpdateAsset),
             onClick: (row: DirectoryItem) => {
                 if (row.itemType === 'FOLDER') {
                     handleOpenEditFolder(row.folderData!);
@@ -582,6 +593,7 @@ export const FoldersBrowserPage: React.FC = () => {
             name: 'Delete',
             icon: <Delete fontSize="small" />,
             color: '#ef4444',
+            visible: (row: DirectoryItem) => (row.itemType === 'FOLDER' ? canDeleteFolder : canDeleteAsset),
             onClick: (row: DirectoryItem) => {
                 if (row.itemType === 'FOLDER') {
                     setFolderToDelete(row.folderData!);
@@ -617,30 +629,34 @@ export const FoldersBrowserPage: React.FC = () => {
                     >
                         Switch Brand
                     </Button>
-                    <Button
-                        variant="outlined"
-                        startIcon={<Add />}
-                        onClick={handleOpenCreateFolder}
-                        sx={{
-                            borderRadius: '10px',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                        }}
-                    >
-                        New Folder
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<CloudUpload />}
-                        onClick={() => setUploadDialogOpen(true)}
-                        sx={{
-                            borderRadius: '10px',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                        }}
-                    >
-                        Upload Asset
-                    </Button>
+                    {canCreateFolder && (
+                        <Button
+                            variant="outlined"
+                            startIcon={<Add />}
+                            onClick={handleOpenCreateFolder}
+                            sx={{
+                                borderRadius: '10px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                            }}
+                        >
+                            New Folder
+                        </Button>
+                    )}
+                    {canCreateAsset && (
+                        <Button
+                            variant="contained"
+                            startIcon={<CloudUpload />}
+                            onClick={() => setUploadDialogOpen(true)}
+                            sx={{
+                                borderRadius: '10px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                            }}
+                        >
+                            Upload Asset
+                        </Button>
+                    )}
                 </Stack>
             </PageHeader>
 

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../../core/store/authStore';
+import { hasPermission, hasSomePermission } from '../../../core/utils/permissions';
 
 interface RouteProtectorProps {
-    requiredPermission?: string;
+    requiredPermission?: string | string[];
     children: ReactNode;
 }
 
@@ -20,24 +21,11 @@ const RouteProtector = ({ requiredPermission, children }: RouteProtectorProps) =
         return <>{children}</>;
     }
 
-    const isSuperAdmin =
-        user?.role === 'SUPER_ADMIN' ||
-        user?.roles?.includes('SUPER_ADMIN');
+    const isAuthorized = Array.isArray(requiredPermission)
+        ? hasSomePermission(user, requiredPermission)
+        : hasPermission(user, requiredPermission);
 
-    if (isSuperAdmin) {
-        return <>{children}</>;
-    }
-
-    // Support both 'read:brands' and 'brands:read' formats
-    const invertedPermission = requiredPermission.includes(':')
-        ? requiredPermission.split(':').reverse().join(':')
-        : requiredPermission;
-
-    const hasPermission =
-        Boolean(user?.permissions?.includes(requiredPermission)) ||
-        Boolean(user?.permissions?.includes(invertedPermission));
-
-    if (!hasPermission) {
+    if (!isAuthorized) {
         return <Navigate to="/access-denied" replace />;
     }
 
@@ -45,3 +33,4 @@ const RouteProtector = ({ requiredPermission, children }: RouteProtectorProps) =
 };
 
 export default RouteProtector;
+

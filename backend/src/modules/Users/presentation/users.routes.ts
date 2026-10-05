@@ -11,11 +11,45 @@ const validatedMiddleware = new ValidatedMiddleware();
 // Protect routes - requires authentication
 router.use(authMiddleware.routeProtect);
 
-router.get("/roles", usersController.listRoles);
-router.get("/", usersController.list);
-router.post("/", validatedMiddleware.validateBody(CreateUserSchema), usersController.create);
-router.put("/:id", validatedMiddleware.validateParams(UserIdSchema), validatedMiddleware.validateBody(UpdateUserSchema), usersController.update);
-router.patch("/:id/disable", validatedMiddleware.validateParams(UserIdSchema), usersController.disable);
-router.delete("/:id", validatedMiddleware.validateParams(UserIdSchema), usersController.delete);
+router.get(
+    "/roles",
+    authMiddleware.checkPermissionSome(["users:create", "users:update", "roles:read", "users:read"]),
+    usersController.listRoles
+);
+
+router.get(
+    "/",
+    authMiddleware.checkPermission("users:read"),
+    usersController.list
+);
+
+router.post(
+    "/",
+    authMiddleware.checkPermission("users:create"),
+    validatedMiddleware.validateBody(CreateUserSchema),
+    usersController.create
+);
+
+router.put(
+    "/:id",
+    authMiddleware.checkPermission("users:update"),
+    validatedMiddleware.validateParams(UserIdSchema),
+    validatedMiddleware.validateBody(UpdateUserSchema),
+    usersController.update
+);
+
+router.patch(
+    "/:id/disable",
+    authMiddleware.checkPermission("users:update"),
+    validatedMiddleware.validateParams(UserIdSchema),
+    usersController.disable
+);
+
+router.delete(
+    "/:id",
+    authMiddleware.checkPermission("users:delete"),
+    validatedMiddleware.validateParams(UserIdSchema),
+    usersController.delete
+);
 
 export default router;

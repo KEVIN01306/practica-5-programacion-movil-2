@@ -9,7 +9,7 @@ router.use(authMiddleware.routeProtect);
 
 router.get(
     "/",
-    authMiddleware.checkPermissionSome(["roles:read"]),
+    authMiddleware.checkPermissionSome(["roles:read", "roles:permissions:update"]),
     rolesController.listPermissions
 );
 

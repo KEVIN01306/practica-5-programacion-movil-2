@@ -15,6 +15,7 @@ import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import type { MenuItem } from './menuItems';
 import { useSidebar } from './SidebarContext';
 import { useAuthStore } from '../../../../core/store/authStore';
+import { hasSomePermission } from '../../../../core/utils/permissions';
 
 interface SidebarItemProps {
     item: MenuItem;
@@ -29,19 +30,7 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({ item }) => {
     const [openSubmenu, setOpenSubmenu] = useState(false);
 
     // Permission check
-    const hasPermission = () => {
-        if (!item.permissions || item.permissions.length === 0) return true;
-        if (!user) return false;
-
-        const isSuperAdmin =
-            user.role === 'SUPER_ADMIN' ||
-            user.roles?.includes('SUPER_ADMIN');
-        if (isSuperAdmin) return true;
-
-        return item.permissions.some((perm) => user.permissions?.includes(perm));
-    };
-
-    if (!hasPermission()) {
+    if (item.permissions && item.permissions.length > 0 && !hasSomePermission(user, item.permissions)) {
         return null;
     }
 

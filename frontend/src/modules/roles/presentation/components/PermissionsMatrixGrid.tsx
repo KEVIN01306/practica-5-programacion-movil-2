@@ -23,6 +23,8 @@ import {
 } from '@mui/icons-material';
 import type { PermissionItem, PermissionsMatrixData } from '../../domain/role.entity';
 import { updateRolePermissions } from '../../infrastructure/services/roles.service';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasSomePermission } from '../../../../core/utils/permissions';
 
 interface PermissionsMatrixGridProps {
     data: PermissionsMatrixData;
@@ -47,6 +49,9 @@ export const PermissionsMatrixGrid: React.FC<PermissionsMatrixGridProps> = ({
     showNotification,
     highlightRoleId,
 }) => {
+    const user = useAuthStore((state) => state.user);
+    const canUpdatePermissions = hasSomePermission(user, ['roles:permissions:update', 'roles:update']);
+
     const { roles, permissions, assignments } = data;
 
     // Build the initial mapping: roleId -> Set<permissionId>
@@ -332,7 +337,7 @@ export const PermissionsMatrixGrid: React.FC<PermissionsMatrixGridProps> = ({
             </Paper>
 
             {/* Floating / Sticky Alert when changes are pending */}
-            {hasPendingChanges && (
+            {hasPendingChanges && canUpdatePermissions && (
                 <Paper
                     elevation={4}
                     sx={{
@@ -540,24 +545,28 @@ export const PermissionsMatrixGrid: React.FC<PermissionsMatrixGridProps> = ({
                                                     />
 
                                                     {/* Quick Select/Deselect All buttons for this role */}
-                                                    <Tooltip title="Marcar todos los visibles">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleBulkRoleAction(role.id, true)}
-                                                            sx={{ p: 0.5, color: '#0284c7' }}
-                                                        >
-                                                            <DoneAll sx={{ fontSize: 16 }} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Desmarcar todos los visibles">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleBulkRoleAction(role.id, false)}
-                                                            sx={{ p: 0.5, color: '#ef4444' }}
-                                                        >
-                                                            <RemoveDone sx={{ fontSize: 16 }} />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    {canUpdatePermissions && (
+                                                        <>
+                                                            <Tooltip title="Marcar todos los visibles">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleBulkRoleAction(role.id, true)}
+                                                                    sx={{ p: 0.5, color: '#0284c7' }}
+                                                                >
+                                                                    <DoneAll sx={{ fontSize: 16 }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            <Tooltip title="Desmarcar todos los visibles">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleBulkRoleAction(role.id, false)}
+                                                                    sx={{ p: 0.5, color: '#ef4444' }}
+                                                                >
+                                                                    <RemoveDone sx={{ fontSize: 16 }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        </>
+                                                    )}
                                                 </Box>
 
                                                 {isModified && (
@@ -689,26 +698,28 @@ export const PermissionsMatrixGrid: React.FC<PermissionsMatrixGridProps> = ({
                                                             </Box>
 
                                                             {/* Quick action: mark this permission for all roles */}
-                                                            <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                                <Tooltip title="Asignar este permiso a todos los roles">
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleBulkPermissionRowAction(perm.id, true)}
-                                                                        sx={{ p: 0.25, color: '#94a3b8', '&:hover': { color: '#0284c7' } }}
-                                                                    >
-                                                                        <DoneAll sx={{ fontSize: 14 }} />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                                <Tooltip title="Remover este permiso de todos los roles">
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleBulkPermissionRowAction(perm.id, false)}
-                                                                        sx={{ p: 0.25, color: '#94a3b8', '&:hover': { color: '#ef4444' } }}
-                                                                    >
-                                                                        <RemoveDone sx={{ fontSize: 14 }} />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                            </Box>
+                                                            {canUpdatePermissions && (
+                                                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                                    <Tooltip title="Asignar este permiso a todos los roles">
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleBulkPermissionRowAction(perm.id, true)}
+                                                                            sx={{ p: 0.25, color: '#94a3b8', '&:hover': { color: '#0284c7' } }}
+                                                                        >
+                                                                            <DoneAll sx={{ fontSize: 14 }} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    <Tooltip title="Remover este permiso de todos los roles">
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleBulkPermissionRowAction(perm.id, false)}
+                                                                            sx={{ p: 0.25, color: '#94a3b8', '&:hover': { color: '#ef4444' } }}
+                                                                        >
+                                                                            <RemoveDone sx={{ fontSize: 14 }} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                </Box>
+                                                            )}
                                                         </Box>
                                                     </td>
 
@@ -733,20 +744,26 @@ export const PermissionsMatrixGrid: React.FC<PermissionsMatrixGridProps> = ({
                                                                 }}
                                                             >
                                                                 <Tooltip
-                                                                    title={`${role.name}: ${isChecked ? 'Permitido (Click para revocar)' : 'No permitido (Click para otorgar)'
-                                                                        }`}
+                                                                    title={
+                                                                        !canUpdatePermissions
+                                                                            ? `${role.name}: ${isChecked ? 'Permitido' : 'No permitido'}`
+                                                                            : `${role.name}: ${isChecked ? 'Permitido (Click para revocar)' : 'No permitido (Click para otorgar)'}`
+                                                                    }
                                                                 >
-                                                                    <Checkbox
-                                                                        checked={isChecked}
-                                                                        onChange={() => handleToggle(role.id, perm.id)}
-                                                                        color="primary"
-                                                                        sx={{
-                                                                            p: 0.5,
-                                                                            '&.Mui-checked': {
-                                                                                color: isRoleModified ? '#d97706' : '#2563eb',
-                                                                            },
-                                                                        }}
-                                                                    />
+                                                                    <span>
+                                                                        <Checkbox
+                                                                            checked={isChecked}
+                                                                            disabled={!canUpdatePermissions}
+                                                                            onChange={() => handleToggle(role.id, perm.id)}
+                                                                            color="primary"
+                                                                            sx={{
+                                                                                p: 0.5,
+                                                                                '&.Mui-checked': {
+                                                                                    color: isRoleModified ? '#d97706' : '#2563eb',
+                                                                                },
+                                                                            }}
+                                                                        />
+                                                                    </span>
                                                                 </Tooltip>
                                                             </td>
                                                         );

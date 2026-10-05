@@ -7,11 +7,19 @@ import { GoogleSearchBar } from '../../../../shared/components/common/GoogleSear
 import ListTable, { type Column, type Action } from '../../../../shared/components/tables/ListTable';
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
 import BrandFormDialog from '../components/BrandFormDialog';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission, hasSomePermission } from '../../../../core/utils/permissions';
 import { getBrandsPaginated, deleteBrand } from '../../infrastructure/services/brands.service';
 import type { BrandDto } from '../../domain/dto/brands.dto';
 
 export const BrandsListPage: React.FC = () => {
     const navigate = useNavigate();
+    const user = useAuthStore((state) => state.user);
+    const canCreate = hasPermission(user, 'brands:create');
+    const canUpdate = hasPermission(user, 'brands:update');
+    const canDelete = hasPermission(user, 'brands:delete');
+    const canExplore = hasSomePermission(user, ['folders:read', 'assets:read', 'brands:read']);
+    const canViewDetails = hasSomePermission(user, ['brands:read', 'assets:read', 'folders:read']);
 
     // Data state
     const [brands, setBrands] = useState<BrandDto[]>([]);
@@ -151,22 +159,26 @@ export const BrandsListPage: React.FC = () => {
         {
             name: 'Explore Directories',
             icon: <Folder fontSize="small" />,
+            visible: () => canExplore,
             onClick: (row: BrandDto) => navigate(`/directorios?brandId=${row.id}`),
         },
         {
             name: 'View Details',
             icon: <Visibility fontSize="small" />,
+            visible: () => canViewDetails,
             onClick: (row: BrandDto) => navigate(`/brands/${row.id}`),
         },
         {
             name: 'Edit',
             icon: <Edit fontSize="small" />,
+            visible: () => canUpdate,
             onClick: (row: BrandDto) => handleOpenEdit(row),
         },
         {
             name: 'Delete',
             icon: <Delete fontSize="small" />,
             color: '#ef4444',
+            visible: () => canDelete,
             onClick: (row: BrandDto) => setBrandToDelete(row),
         },
     ];
@@ -176,9 +188,9 @@ export const BrandsListPage: React.FC = () => {
             <PageHeader
                 title="Brands"
                 subtitle="Manage and organize your global brand assets and digital catalogs"
-                actionLabel="New Brand"
-                actionIcon={<Add />}
-                onAction={handleOpenCreate}
+                actionLabel={canCreate ? "New Brand" : undefined}
+                actionIcon={canCreate ? <Add /> : undefined}
+                onAction={canCreate ? handleOpenCreate : undefined}
             />
 
             <GoogleSearchBar

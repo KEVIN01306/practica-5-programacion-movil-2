@@ -21,6 +21,8 @@ import {
     PictureAsPdf,
     InsertDriveFile,
 } from '@mui/icons-material';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission } from '../../../../core/utils/permissions';
 import type { AssetDto } from '../../domain/dto/assets.dto';
 
 interface AssetCardProps {
@@ -38,6 +40,10 @@ export const AssetCard: React.FC<AssetCardProps> = ({
     onEdit,
     onDelete,
 }) => {
+    const user = useAuthStore((state) => state.user);
+    const canUpdate = hasPermission(user, 'assets:update');
+    const canDelete = hasPermission(user, 'assets:delete');
+
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const openMenu = Boolean(anchorEl);
 
@@ -192,40 +198,46 @@ export const AssetCard: React.FC<AssetCardProps> = ({
                         </ListItemIcon>
                         <ListItemText primary="View Details" />
                     </MenuItem>
-                    <MenuItem
-                        onClick={() => {
-                            handleMenuClose();
-                            onReplace(asset);
-                        }}
-                    >
-                        <ListItemIcon>
-                            <SwapHoriz fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText primary="Replace File" />
-                    </MenuItem>
-                    <MenuItem
-                        onClick={() => {
-                            handleMenuClose();
-                            onEdit(asset);
-                        }}
-                    >
-                        <ListItemIcon>
-                            <Edit fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText primary="Edit Information" />
-                    </MenuItem>
-                    <MenuItem
-                        onClick={() => {
-                            handleMenuClose();
-                            onDelete(asset);
-                        }}
-                        sx={{ color: 'error.main' }}
-                    >
-                        <ListItemIcon sx={{ color: 'error.main' }}>
-                            <Delete fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText primary="Delete Asset" />
-                    </MenuItem>
+                    {canUpdate && (
+                        <MenuItem
+                            onClick={() => {
+                                handleMenuClose();
+                                onReplace(asset);
+                            }}
+                        >
+                            <ListItemIcon>
+                                <SwapHoriz fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Replace File" />
+                        </MenuItem>
+                    )}
+                    {canUpdate && (
+                        <MenuItem
+                            onClick={() => {
+                                handleMenuClose();
+                                onEdit(asset);
+                            }}
+                        >
+                            <ListItemIcon>
+                                <Edit fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Edit Information" />
+                        </MenuItem>
+                    )}
+                    {canDelete && (
+                        <MenuItem
+                            onClick={() => {
+                                handleMenuClose();
+                                onDelete(asset);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <ListItemIcon sx={{ color: 'error.main' }}>
+                                <Delete fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Delete Asset" />
+                        </MenuItem>
+                    )}
                 </Menu>
             </Box>
 

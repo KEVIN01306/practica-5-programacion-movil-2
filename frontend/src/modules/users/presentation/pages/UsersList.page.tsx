@@ -19,6 +19,8 @@ import { GoogleSearchBar } from '../../../../shared/components/common/GoogleSear
 import ListTable, { type Column, type Action } from '../../../../shared/components/tables/ListTable';
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
 import UserFormDialog from '../components/UserFormDialog';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission } from '../../../../core/utils/permissions';
 import {
     getUsersPaginated,
     disableUser,
@@ -27,6 +29,11 @@ import {
 import type { UserDto } from '../../domain/dto/users.dto';
 
 export const UsersListPage: React.FC = () => {
+    const user = useAuthStore((state) => state.user);
+    const canCreate = hasPermission(user, 'users:create');
+    const canUpdate = hasPermission(user, 'users:update');
+    const canDelete = hasPermission(user, 'users:delete');
+
     const [users, setUsers] = useState<UserDto[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
@@ -229,19 +236,21 @@ export const UsersListPage: React.FC = () => {
         {
             name: 'Edit',
             icon: <Edit fontSize="small" />,
+            visible: () => canUpdate,
             onClick: (row: UserDto) => handleOpenEdit(row),
         },
         {
             name: 'Disable Account',
             icon: <Block fontSize="small" />,
             color: '#eab308',
-            visible: (row: UserDto) => row.isActive,
+            visible: (row: UserDto) => row.isActive && canUpdate,
             onClick: (row: UserDto) => setUserToDisable(row),
         },
         {
             name: 'Delete User',
             icon: <Delete fontSize="small" />,
             color: '#ef4444',
+            visible: () => canDelete,
             onClick: (row: UserDto) => setUserToDelete(row),
         },
     ];
@@ -251,9 +260,9 @@ export const UsersListPage: React.FC = () => {
             <PageHeader
                 title="Users Management"
                 subtitle="Directory of authenticated users, security access, and account statuses"
-                actionLabel="New User"
-                actionIcon={<PersonAdd />}
-                onAction={handleOpenCreate}
+                actionLabel={canCreate ? "New User" : undefined}
+                actionIcon={canCreate ? <PersonAdd /> : undefined}
+                onAction={canCreate ? handleOpenCreate : undefined}
             />
 
             <GoogleSearchBar

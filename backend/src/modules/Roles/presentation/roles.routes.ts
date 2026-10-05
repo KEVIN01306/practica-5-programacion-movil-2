@@ -20,40 +20,40 @@ router.use(authMiddleware.routeProtect);
 // Permissions catalog and matrix routes (must precede /:id)
 router.get(
     "/matrix",
-    authMiddleware.checkPermissionSome(["roles:read"]),
+    authMiddleware.checkPermissionSome(["roles:read", "roles:permissions:update"]),
     rolesController.getMatrix
 );
 
 router.get(
     "/permissions",
-    authMiddleware.checkPermissionSome(["roles:read"]),
+    authMiddleware.checkPermissionSome(["roles:read", "roles:permissions:update"]),
     rolesController.listPermissions
 );
 
 // Role CRUD routes
 router.get(
     "/",
-    authMiddleware.checkPermissionSome(["roles:read"]),
+    authMiddleware.checkPermission("roles:read"),
     rolesController.list
 );
 
 router.post(
     "/",
-    authMiddleware.checkPermissionSome(["roles:create"]),
+    authMiddleware.checkPermission("roles:create"),
     validatedMiddleware.validateBody(CreateRoleSchema),
     rolesController.create
 );
 
 router.get(
     "/:id",
-    authMiddleware.checkPermissionSome(["roles:read"]),
+    authMiddleware.checkPermission("roles:read"),
     validatedMiddleware.validateParams(RoleIdSchema),
     rolesController.getById
 );
 
 router.patch(
     "/:id",
-    authMiddleware.checkPermissionSome(["roles:update"]),
+    authMiddleware.checkPermission("roles:update"),
     validatedMiddleware.validateParams(RoleIdSchema),
     validatedMiddleware.validateBody(UpdateRoleSchema),
     rolesController.update
@@ -61,7 +61,7 @@ router.patch(
 
 router.put(
     "/:id",
-    authMiddleware.checkPermissionSome(["roles:update"]),
+    authMiddleware.checkPermission("roles:update"),
     validatedMiddleware.validateParams(RoleIdSchema),
     validatedMiddleware.validateBody(UpdateRoleSchema),
     rolesController.update
@@ -69,7 +69,7 @@ router.put(
 
 router.delete(
     "/:id",
-    authMiddleware.checkPermissionSome(["roles:delete"]),
+    authMiddleware.checkPermission("roles:delete"),
     validatedMiddleware.validateParams(RoleIdSchema),
     rolesController.delete
 );
@@ -77,7 +77,7 @@ router.delete(
 // Role-Permissions management routes
 router.get(
     "/:roleId/permissions",
-    authMiddleware.checkPermissionSome(["roles:read"]),
+    authMiddleware.checkPermissionSome(["roles:read", "roles:permissions:update"]),
     validatedMiddleware.validateParams(RolePermissionParamSchema),
     rolesController.getRolePermissions
 );

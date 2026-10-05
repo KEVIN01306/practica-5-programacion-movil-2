@@ -27,6 +27,8 @@ import ListTable, { type Column, type Action } from '../../../../shared/componen
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
 import RoleFormDialog from '../components/RoleFormDialog';
 import PermissionsMatrixGrid from '../components/PermissionsMatrixGrid';
+import { useAuthStore } from '../../../../core/store/authStore';
+import { hasPermission, hasSomePermission } from '../../../../core/utils/permissions';
 import {
     getRolesPaginated,
     deleteRole,
@@ -35,6 +37,12 @@ import {
 import type { RoleItem, PermissionsMatrixData } from '../../domain/role.entity';
 
 export const RolesManagementPage: React.FC = () => {
+    const user = useAuthStore((state) => state.user);
+    const canCreate = hasPermission(user, 'roles:create');
+    const canUpdate = hasPermission(user, 'roles:update');
+    const canDelete = hasPermission(user, 'roles:delete');
+    const canManagePermissions = hasSomePermission(user, ['roles:permissions:update', 'roles:update', 'roles:read']);
+
     // Current Tab: 0 = Roles List, 1 = Permissions Matrix
     const [tabIndex, setTabIndex] = useState<number>(0);
 
@@ -250,18 +258,20 @@ export const RolesManagementPage: React.FC = () => {
             name: 'Gestionar Permisos',
             icon: <Key fontSize="small" />,
             color: '#2563eb',
+            visible: () => canManagePermissions,
             onClick: (row: RoleItem) => handleManagePermissions(row),
         },
         {
             name: 'Editar',
             icon: <Edit fontSize="small" />,
+            visible: () => canUpdate,
             onClick: (row: RoleItem) => handleOpenEdit(row),
         },
         {
             name: 'Eliminar',
             icon: <Delete fontSize="small" />,
             color: '#ef4444',
-            visible: (row: RoleItem) => !row.isSystem,
+            visible: (row: RoleItem) => !row.isSystem && canDelete,
             onClick: (row: RoleItem) => setRoleToDelete(row),
         },
     ];
@@ -271,9 +281,9 @@ export const RolesManagementPage: React.FC = () => {
             <PageHeader
                 title="Roles y Permisos"
                 subtitle="Administra los perfiles de acceso y configura granularmente la matriz de permisos de seguridad"
-                actionLabel="Nuevo Rol"
-                actionIcon={<AddModerator />}
-                onAction={handleOpenCreate}
+                actionLabel={canCreate ? "Nuevo Rol" : undefined}
+                actionIcon={canCreate ? <AddModerator /> : undefined}
+                onAction={canCreate ? handleOpenCreate : undefined}
             />
 
             {/* Navigation Tabs */}
