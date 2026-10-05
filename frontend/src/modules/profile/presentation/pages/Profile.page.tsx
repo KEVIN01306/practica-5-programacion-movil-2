@@ -10,6 +10,7 @@ import {
     Tooltip,
     Alert,
     Snackbar,
+    Button,
 } from '@mui/material';
 import {
     PersonOutlineOutlined,
@@ -23,10 +24,12 @@ import {
     MenuBookOutlined,
     FingerprintOutlined,
     Check,
+    LockResetOutlined,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../../../core/store/authStore';
 import { getCurrentUser } from '../../../auth/infrastructure/services/auth.service';
 import type { AuthUser } from '../../../auth/domain/interfaces/auth.interfaces';
+import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 
 interface ProfileRowProps {
     icon?: React.ReactNode;
@@ -135,6 +138,7 @@ export const ProfilePage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'error' }>({
         open: false,
         message: '',
@@ -405,6 +409,28 @@ export const ProfilePage: React.FC = () => {
                     }
                 />
                 <ProfileRow
+                    icon={<LockResetOutlined />}
+                    label="Contraseña de Acceso"
+                    value={
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<LockResetOutlined sx={{ fontSize: 16 }} />}
+                            onClick={() => setPasswordDialogOpen(true)}
+                            sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                fontSize: '12px',
+                                px: 1.75,
+                                py: 0.5,
+                            }}
+                        >
+                            Cambiar contraseña
+                        </Button>
+                    }
+                />
+                <ProfileRow
                     icon={<CalendarMonthOutlined />}
                     label="Miembro Desde"
                     value={formattedDate}
@@ -442,6 +468,18 @@ export const ProfilePage: React.FC = () => {
                     }
                 />
             </GoogleCard>
+
+            <ChangePasswordDialog
+                open={passwordDialogOpen}
+                onClose={() => setPasswordDialogOpen(false)}
+                onSuccess={() => {
+                    setSnackbar({
+                        open: true,
+                        message: 'Contraseña actualizada exitosamente',
+                        severity: 'success',
+                    });
+                }}
+            />
 
             <Snackbar
                 open={snackbar.open}

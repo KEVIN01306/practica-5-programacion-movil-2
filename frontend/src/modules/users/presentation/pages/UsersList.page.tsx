@@ -13,6 +13,7 @@ import {
     Edit,
     Delete,
     Block,
+    CheckCircle,
 } from '@mui/icons-material';
 import { PageHeader } from '../../../../shared/components/common/PageHeader';
 import { GoogleSearchBar } from '../../../../shared/components/common/GoogleSearchBar';
@@ -24,6 +25,7 @@ import { hasPermission } from '../../../../core/utils/permissions';
 import {
     getUsersPaginated,
     disableUser,
+    activateUser,
     deleteUser,
 } from '../../infrastructure/services/users.service';
 import type { UserDto } from '../../domain/dto/users.dto';
@@ -47,6 +49,7 @@ export const UsersListPage: React.FC = () => {
     const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
     const [userToDelete, setUserToDelete] = useState<UserDto | null>(null);
     const [userToDisable, setUserToDisable] = useState<UserDto | null>(null);
+    const [userToActivate, setUserToActivate] = useState<UserDto | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
     // Feedback toast
@@ -109,6 +112,29 @@ export const UsersListPage: React.FC = () => {
             setSnackbar({
                 open: true,
                 message: err.response?.data?.message || 'Failed to disable user',
+                severity: 'error',
+            });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleConfirmActivate = async () => {
+        if (!userToActivate) return;
+        setIsProcessing(true);
+        try {
+            await activateUser(userToActivate.id);
+            setSnackbar({
+                open: true,
+                message: 'User account reactivated successfully',
+                severity: 'success',
+            });
+            setUserToActivate(null);
+            fetchUsers();
+        } catch (err: any) {
+            setSnackbar({
+                open: true,
+                message: err.response?.data?.message || 'Failed to reactivate user',
                 severity: 'error',
             });
         } finally {
@@ -247,6 +273,13 @@ export const UsersListPage: React.FC = () => {
             onClick: (row: UserDto) => setUserToDisable(row),
         },
         {
+            name: 'Reactivar usuario',
+            icon: <CheckCircle fontSize="small" />,
+            color: '#10b981',
+            visible: (row: UserDto) => !row.isActive && canUpdate,
+            onClick: (row: UserDto) => setUserToActivate(row),
+        },
+        {
             name: 'Delete User',
             icon: <Delete fontSize="small" />,
             color: '#ef4444',
@@ -325,6 +358,22 @@ export const UsersListPage: React.FC = () => {
                 isLoading={isProcessing}
                 confirmText="Disable Account"
                 confirmColor="warning"
+            />
+
+            {/* Reactivate Account Confirmation Dialog */}
+            <ConfirmDialog
+                open={Boolean(userToActivate)}
+                title="¿Reactivar usuario?"
+                description={
+                    <span>
+                        El usuario <strong>{userToActivate?.firstName} {userToActivate?.lastName}</strong> ({userToActivate?.email}) volverá a tener acceso al sistema.
+                    </span>
+                }
+                onClose={() => setUserToActivate(null)}
+                onConfirm={handleConfirmActivate}
+                isLoading={isProcessing}
+                confirmText="Reactivar"
+                confirmColor="primary"
             />
 
             {/* Delete User Confirmation Dialog */}

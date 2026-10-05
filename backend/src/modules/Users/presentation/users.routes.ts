@@ -2,7 +2,7 @@ import { Router } from "express";
 import { usersController } from "../users.module.js";
 import { AuthMiddleware } from "@app/middleware/Auth.middleware.js";
 import { ValidatedMiddleware } from "@app/middleware/Validated.middleware.js";
-import { CreateUserSchema, UpdateUserSchema, UserIdSchema } from "./users.schemas.js";
+import { CreateUserSchema, UpdateUserSchema, UserIdSchema, ChangePasswordSchema } from "./users.schemas.js";
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();
@@ -15,6 +15,12 @@ router.get(
     "/roles",
     authMiddleware.checkPermissionSome(["users:create", "users:update", "roles:read", "users:read"]),
     usersController.listRoles
+);
+
+router.patch(
+    "/me/password",
+    validatedMiddleware.validateBody(ChangePasswordSchema),
+    usersController.changePassword
 );
 
 router.get(
@@ -36,6 +42,13 @@ router.put(
     validatedMiddleware.validateParams(UserIdSchema),
     validatedMiddleware.validateBody(UpdateUserSchema),
     usersController.update
+);
+
+router.patch(
+    "/:id/activate",
+    authMiddleware.checkPermission("users:update"),
+    validatedMiddleware.validateParams(UserIdSchema),
+    usersController.activate
 );
 
 router.patch(

@@ -5,6 +5,7 @@ import type { HashProvider } from "@shared/domain/hash.provider.js";
 import { UniqueConstraintError } from "@shared/db/database/errors/UniqueConstraintError.js";
 import type { AuditLogService } from "../../Audit/application/audit-log.service.js";
 import type { AuditContext } from "../../Audit/domain/audit-log.entity.js";
+import { isValidUserEmailDomain } from "../presentation/users.schemas.js";
 
 interface CreateUserRequest {
     email: string;
@@ -23,6 +24,14 @@ export class CreateUserUseCase {
 
     async execute(data: CreateUserRequest, context?: AuditContext): Promise<GetUser> {
         try {
+            if (!isValidUserEmailDomain(data.email)) {
+                throw new AppError(
+                    "Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.",
+                    "INVALID_EMAIL_DOMAIN",
+                    400
+                );
+            }
+
             const existingUser = await this.usersRepository.findByEmail(data.email);
             if (existingUser) {
                 throw new AppError("Email already in use", "EMAIL_ALREADY_EXISTS", 400);

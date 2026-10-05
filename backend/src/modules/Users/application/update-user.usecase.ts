@@ -5,6 +5,7 @@ import { UniqueConstraintError } from "@shared/db/database/errors/UniqueConstrai
 import { NotFoundPersistenceError } from "@shared/db/database/errors/NotFoundPersistenceError.js";
 import type { AuditLogService } from "../../Audit/application/audit-log.service.js";
 import type { AuditContext } from "../../Audit/domain/audit-log.entity.js";
+import { isValidUserEmailDomain } from "../presentation/users.schemas.js";
 
 export class UpdateUserUseCase {
     constructor(
@@ -20,6 +21,14 @@ export class UpdateUserUseCase {
             }
 
             if (data.email && data.email !== user.email) {
+                if (!isValidUserEmailDomain(data.email)) {
+                    throw new AppError(
+                        "Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.",
+                        "INVALID_EMAIL_DOMAIN",
+                        400
+                    );
+                }
+
                 const existingEmail = await this.usersRepository.findByEmail(data.email);
                 if (existingEmail) {
                     throw new AppError("Email already in use", "EMAIL_ALREADY_EXISTS", 400);

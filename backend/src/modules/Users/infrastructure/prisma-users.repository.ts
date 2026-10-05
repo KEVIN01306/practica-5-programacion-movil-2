@@ -187,6 +187,47 @@ export class PrismaUsersRepository implements UsersRepository {
         }
     }
 
+    async activate(id: string): Promise<GetUser> {
+        try {
+            const user = await this.prisma.user.update({
+                where: { id },
+                data: { isActive: true },
+                include: {
+                    userRoles: {
+                        select: {
+                            role: { select: { name: true } }
+                        }
+                    }
+                }
+            });
+            return UsersMapper.toGetUser(user);
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
+    async findByIdWithPassword(id: string): Promise<User | null> {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id }
+            });
+            return user ? UsersMapper.toDomain(user) : null;
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
+    async updatePassword(id: string, passwordHash: string): Promise<void> {
+        try {
+            await this.prisma.user.update({
+                where: { id },
+                data: { passwordHash }
+            });
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
     async disable(id: string): Promise<GetUser> {
         try {
             const user = await this.prisma.user.update({

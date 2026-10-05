@@ -5,9 +5,12 @@ import type { CreateUserUseCase } from "../application/create-user.usecase.js";
 import type { UpdateUserUseCase } from "../application/update-user.usecase.js";
 import type { ListUsersUseCase } from "../application/list-users.usecase.js";
 import type { ListRolesUseCase } from "../application/list-roles.usecase.js";
+import type { ActivateUserUseCase } from "../application/activate-user.usecase.js";
 import type { DisableUserUseCase } from "../application/disable-user.usecase.js";
 import type { DeleteUserUseCase } from "../application/delete-user.usecase.js";
+import type { ChangePasswordUseCase } from "../application/change-password.usecase.js";
 import type { HashProvider } from "@shared/domain/hash.provider.js";
+import AppError from "@shared/errors/AppError.js";
 
 export class UsersController extends BaseController {
     constructor(
@@ -15,8 +18,10 @@ export class UsersController extends BaseController {
         private readonly updateUserUseCase: UpdateUserUseCase,
         private readonly listUsersUseCase: ListUsersUseCase,
         private readonly listRolesUseCase: ListRolesUseCase,
+        private readonly activateUserUseCase: ActivateUserUseCase,
         private readonly disableUserUseCase: DisableUserUseCase,
         private readonly deleteUserUseCase: DeleteUserUseCase,
+        private readonly changePasswordUseCase: ChangePasswordUseCase,
         private readonly hashProvider: HashProvider
     ) {
         super();
@@ -79,12 +84,37 @@ export class UsersController extends BaseController {
         }
     };
 
+    activate = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const id = req.params.id as string;
+            const auditContext = this.getAuditContext(req, res);
+            const user = await this.activateUserUseCase.execute(id, auditContext);
+            return res.status(200).json(ResponseHttp.success("User reactivated successfully", user));
+        } catch (error) {
+            next(error);
+        }
+    };
+
     disable = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = req.params.id as string;
             const auditContext = this.getAuditContext(req, res);
             const user = await this.disableUserUseCase.execute(id, auditContext);
             return res.status(200).json(ResponseHttp.success("User disabled successfully", user));
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    changePassword = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userCtx = (req as any).user || res.locals.user;
+            if (!userCtx?.id) {
+                throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+            }
+            const auditContext = this.getAuditContext(req, res);
+            await this.changePasswordUseCase.execute(userCtx.id, req.body, auditContext);
+            return res.status(200).json(ResponseHttp.success("Password changed successfully", null));
         } catch (error) {
             next(error);
         }

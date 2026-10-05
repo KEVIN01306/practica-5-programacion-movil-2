@@ -56,6 +56,11 @@ export const disableUser = async (id: string): Promise<UserDto> => {
     return response.data.data;
 };
 
+export const activateUser = async (id: string): Promise<UserDto> => {
+    const response = await api.patch<ApiResponse<UserDto>>(`/users/${id}/activate`);
+    return response.data.data;
+};
+
 export const deleteUser = async (id: string): Promise<void> => {
     await api.delete(`/users/${id}`);
 };
