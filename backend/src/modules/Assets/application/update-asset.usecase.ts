@@ -1,4 +1,3 @@
-import path from "path";
 import type { AssetsRepository } from "../domain/assets.repository.js";
 import type { UpdateAssetInput, AssetEntity, UpdateAssetRepoInput } from "../domain/asset.entity.js";
 import type { BrandsRepository } from "../../Brands/domain/brands.repository.js";
@@ -96,18 +95,35 @@ export class UpdateAssetUseCase {
         } | null = null;
 
         // 4. Handle Physical File Replacement or Relocation
-
         const oldKey = this.storageProvider.extractKeyFromUrl(currentAsset.url);
         const targetFolderId = data.folderId !== undefined ? data.folderId : currentAsset.folderId;
         const targetBrandId = effectiveBrandId;
-        const targetFileName = currentAsset.fileName;
+        const isRelocating =
+            (data.folderId !== undefined && data.folderId !== currentAsset.folderId) ||
+            (data.brandId !== undefined && data.brandId !== currentAsset.brandId);
+
+        let targetKey = oldKey;
+        if (isRelocating) {
+            const currentFileNameInKey = (oldKey && oldKey.split("/").pop()) || currentAsset.fileName;
+            targetKey = await StoragePathHelper.resolveAndBuildKey(
+                targetBrandId,
+                targetFolderId,
+                currentFileNameInKey,
+                this.foldersRepository
+            );
+        } else if (!targetKey) {
+            targetKey = await StoragePathHelper.resolveAndBuildKey(
+                targetBrandId,
+                targetFolderId,
+                StoragePathHelper.sanitizeFileName(currentAsset.fileName),
+                this.foldersRepository
+            );
+        }
 
         if (data.file && data.file.buffer && data.file.buffer.length > 0) {
             const originalName = data.file.originalname;
             const mimeType = data.file.mimetype;
             const sizeBytes = BigInt(data.file.size);
-            const parsedExt = path.extname(originalName).replace(/^\./, "").toLowerCase();
-            const extension = parsedExt || null;
             const type = this.determineAssetType(mimeType);
 
             fileDetails = {
@@ -119,46 +135,32 @@ export class UpdateAssetUseCase {
                 newSizeBytes: Number(data.file.size),
             };
 
-            const newKey = await StoragePathHelper.resolveAndBuildKey(
-                targetBrandId,
-                targetFolderId,
-                StoragePathHelper.sanitizeFileName(originalName),
-                this.foldersRepository
-            );
-
+            // Overwrite physical file in storage at the exact target key (preserving original fileName and URL)
             const uploadResult = await this.storageProvider.upload({
-                key: newKey,
+                key: targetKey,
                 buffer: data.file.buffer,
                 mimeType,
             });
 
-            if (oldKey && oldKey !== newKey) {
+            if (isRelocating && oldKey && oldKey !== targetKey) {
                 await this.storageProvider.delete(oldKey).catch((e) => {
-                    console.error("Failed to delete old file key after replacement:", e);
+                    console.error("Failed to delete old file key after relocation and replacement:", e);
                 });
+                repoUpdateData.url = uploadResult.url;
+            } else {
+                // Keep the exact original URL
+                repoUpdateData.url = currentAsset.url;
             }
 
-            repoUpdateData.url = uploadResult.url;
-            repoUpdateData.fileName = originalName;
+            // CRITICAL: When replacing an existing asset file, the public identity (URL, fileName, extension)
+            // MUST remain identical to the original asset. Only technical metadata of the content is updated.
             repoUpdateData.mimeType = mimeType;
             repoUpdateData.sizeBytes = sizeBytes;
-            repoUpdateData.extension = extension;
             repoUpdateData.type = type;
-        } else if (
-            (data.folderId !== undefined && data.folderId !== currentAsset.folderId) ||
-            (data.brandId !== undefined && data.brandId !== currentAsset.brandId)
-        ) {
-            // Relocation: Move physical file to new hierarchy in R2
-            const currentFileNameInKey = oldKey.split("/").pop() || targetFileName;
-            const newKey = await StoragePathHelper.resolveAndBuildKey(
-                targetBrandId,
-                targetFolderId,
-                currentFileNameInKey,
-                this.foldersRepository
-            );
-
-            if (oldKey && oldKey !== newKey) {
-                const moveResult = await this.storageProvider.move(oldKey, newKey);
+        } else if (isRelocating) {
+            // Relocation without file replacement: Move physical file to new hierarchy in R2
+            if (oldKey && oldKey !== targetKey) {
+                const moveResult = await this.storageProvider.move(oldKey, targetKey);
                 repoUpdateData.url = moveResult.url;
             }
         }
