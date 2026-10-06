@@ -6,6 +6,7 @@ import type { ListFoldersUseCase } from "../application/list-folders.usecase.js"
 import type { GetFolderUseCase } from "../application/get-folder.usecase.js";
 import type { UpdateFolderUseCase } from "../application/update-folder.usecase.js";
 import type { DeleteFolderUseCase } from "../application/delete-folder.usecase.js";
+import type { CopyFolderUseCase } from "../application/copy-folder.usecase.js";
 import type { GetFolder } from "../domain/folder.entity.js";
 
 export class FoldersController extends BaseController {
@@ -14,7 +15,8 @@ export class FoldersController extends BaseController {
         private readonly listFoldersUseCase: ListFoldersUseCase,
         private readonly getFolderUseCase: GetFolderUseCase,
         private readonly updateFolderUseCase: UpdateFolderUseCase,
-        private readonly deleteFolderUseCase: DeleteFolderUseCase
+        private readonly deleteFolderUseCase: DeleteFolderUseCase,
+        private readonly copyFolderUseCase: CopyFolderUseCase
     ) {
         super();
     }
@@ -78,6 +80,30 @@ export class FoldersController extends BaseController {
         }
     };
 
+    copy = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const id = req.params.id as string;
+            const auditContext = this.getAuditContext(req, res);
+            let targetParentId: string | null = null;
+            if (req.body.targetParentId && req.body.targetParentId !== "null" && req.body.targetParentId !== "") {
+                targetParentId = req.body.targetParentId;
+            }
+
+            const folder = await this.copyFolderUseCase.execute(
+                id,
+                {
+                    targetBrandId: req.body.targetBrandId,
+                    targetParentId,
+                },
+                auditContext
+            );
+
+            return res.status(201).json(ResponseHttp.success("Folder copied successfully", folder));
+        } catch (error) {
+            next(error);
+        }
+    };
+
     delete = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = req.params.id as string;
@@ -88,5 +114,5 @@ export class FoldersController extends BaseController {
             next(error);
         }
     };
-
 }
+

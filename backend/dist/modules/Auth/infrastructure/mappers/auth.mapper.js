@@ -7,8 +7,9 @@ export class AuthMapper {
             email: user.email,
             passwordHash: user.passwordHash,
             isActive: user.isActive,
-            roles: user.userRoles?.map((ur) => ur.role?.name) || [],
-            permissions: user.userRoles?.flatMap((ur) => ur.role?.rolePermissions?.map((rp) => rp.permission?.action) || []) || [],
+            isVerify: Boolean(user.isVerify),
+            roles: user.userRoles?.map((ur) => ur.role?.name || ur.role).filter(Boolean) || [],
+            permissions: user.userRoles?.flatMap((ur) => ur.role?.rolePermissions?.map((rp) => rp.permission?.action) || []).filter(Boolean) || [],
             createdAt: user.createdAt,
         };
     }

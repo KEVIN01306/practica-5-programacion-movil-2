@@ -202,6 +202,47 @@ export class PrismaFoldersRepository implements FoldersRepository {
         }
     }
 
+    async findAllChildren(parentId: string): Promise<GetFolder[]> {
+        try {
+            const folders = await this.prisma.folder.findMany({
+                where: { parentId },
+                orderBy: { name: "asc" },
+                include: {
+                    brand: { select: { id: true, name: true } },
+                    parent: { select: { id: true, name: true } },
+                    _count: { select: { children: true, assets: true } }
+                }
+            });
+            return folders.map(FoldersMapper.toDomain);
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
+    async findSubfolderIdsRecursive(folderId: string): Promise<string[]> {
+        try {
+            const allIds: string[] = [folderId];
+            const queue: string[] = [folderId];
+
+            while (queue.length > 0) {
+                const currentId = queue.shift()!;
+                const children = await this.prisma.folder.findMany({
+                    where: { parentId: currentId },
+                    select: { id: true }
+                });
+
+                for (const child of children) {
+                    allIds.push(child.id);
+                    queue.push(child.id);
+                }
+            }
+
+            return allIds;
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
     async delete(id: string): Promise<void> {
         try {
             await this.prisma.folder.delete({
@@ -212,3 +253,4 @@ export class PrismaFoldersRepository implements FoldersRepository {
         }
     }
 }
+

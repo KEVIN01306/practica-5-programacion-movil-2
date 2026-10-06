@@ -1,6 +1,7 @@
 import AppError from "../../../shared/errors/AppError.js";
 import { UniqueConstraintError } from "../../../shared/db/database/errors/UniqueConstraintError.js";
 import { NotFoundPersistenceError } from "../../../shared/db/database/errors/NotFoundPersistenceError.js";
+import { isValidUserEmailDomain } from "../presentation/users.schemas.js";
 export class UpdateUserUseCase {
     usersRepository;
     auditLogService;
@@ -15,6 +16,9 @@ export class UpdateUserUseCase {
                 throw new AppError("User not found", "USER_NOT_FOUND", 404);
             }
             if (data.email && data.email !== user.email) {
+                if (!isValidUserEmailDomain(data.email)) {
+                    throw new AppError("Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.", "INVALID_EMAIL_DOMAIN", 400);
+                }
                 const existingEmail = await this.usersRepository.findByEmail(data.email);
                 if (existingEmail) {
                     throw new AppError("Email already in use", "EMAIL_ALREADY_EXISTS", 400);

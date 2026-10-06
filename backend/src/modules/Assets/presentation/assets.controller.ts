@@ -6,6 +6,7 @@ import type { ListAssetsUseCase } from "../application/list-assets.usecase.js";
 import type { GetAssetUseCase } from "../application/get-asset.usecase.js";
 import type { UpdateAssetUseCase } from "../application/update-asset.usecase.js";
 import type { DeleteAssetUseCase } from "../application/delete-asset.usecase.js";
+import type { CopyAssetUseCase } from "../application/copy-asset.usecase.js";
 import type { AssetType } from "../domain/asset.entity.js";
 
 export class AssetsController extends BaseController {
@@ -14,10 +15,12 @@ export class AssetsController extends BaseController {
         private readonly listAssetsUseCase: ListAssetsUseCase,
         private readonly getAssetUseCase: GetAssetUseCase,
         private readonly updateAssetUseCase: UpdateAssetUseCase,
-        private readonly deleteAssetUseCase: DeleteAssetUseCase
+        private readonly deleteAssetUseCase: DeleteAssetUseCase,
+        private readonly copyAssetUseCase: CopyAssetUseCase
     ) {
         super();
     }
+
 
     create = async (req: Request, res: Response, next: NextFunction) => {
         try {
@@ -137,7 +140,32 @@ export class AssetsController extends BaseController {
         }
     };
 
+    copy = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const id = req.params.id as string;
+            const auditContext = this.getAuditContext(req, res);
+            let targetFolderId: string | null = null;
+            if (req.body.targetFolderId && req.body.targetFolderId !== "null" && req.body.targetFolderId !== "") {
+                targetFolderId = req.body.targetFolderId;
+            }
+
+            const asset = await this.copyAssetUseCase.execute(
+                id,
+                {
+                    targetBrandId: req.body.targetBrandId,
+                    targetFolderId,
+                },
+                auditContext
+            );
+
+            return res.status(201).json(ResponseHttp.success("Asset copied successfully", asset));
+        } catch (error) {
+            next(error);
+        }
+    };
+
     delete = async (req: Request, res: Response, next: NextFunction) => {
+
         try {
             const id = req.params.id as string;
             const auditContext = this.getAuditContext(req, res);

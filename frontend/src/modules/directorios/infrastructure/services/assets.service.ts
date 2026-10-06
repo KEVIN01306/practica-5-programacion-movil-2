@@ -5,7 +5,9 @@ import type {
     AssetFilters,
     CreateAssetPayload,
     UpdateAssetPayload,
+    CopyAssetPayload,
 } from '../../domain/dto/assets.dto';
+
 
 interface ApiResponse<T> {
     status: string;
@@ -96,6 +98,15 @@ export const updateAsset = async (
     return response.data.data;
 };
 
+export const copyAsset = async (
+    id: string,
+    payload: CopyAssetPayload
+): Promise<AssetDto> => {
+    const response = await api.post<ApiResponse<AssetDto>>(`/assets/${id}/copy`, payload);
+    return response.data.data;
+};
+
 export const deleteAsset = async (id: string): Promise<void> => {
     await api.delete(`/assets/${id}`);
 };
+

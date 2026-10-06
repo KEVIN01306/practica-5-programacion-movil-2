@@ -10,6 +10,9 @@ import {
     Stack,
     Tabs,
     Tab,
+    CircularProgress,
+    Tooltip,
+    Paper,
 } from '@mui/material';
 import {
     Add,
@@ -26,10 +29,14 @@ import {
     InsertDriveFile,
     Visibility,
     SwapHoriz,
+    ContentCopy,
+    ContentPaste,
+    Clear,
+    Deselect,
 } from '@mui/icons-material';
 import { PageHeader } from '../../../../shared/components/common/PageHeader';
 import { GoogleSearchBar } from '../../../../shared/components/common/GoogleSearchBar';
-import ListTable, { type Column, type Action } from '../../../../shared/components/tables/ListTable';
+import ListTable, { type Column, type Action, type SelectionProps } from '../../../../shared/components/tables/ListTable';
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
 import FolderBreadcrumb from '../components/FolderBreadcrumb';
 import FolderFormDialog from '../components/FolderFormDialog';
@@ -41,13 +48,16 @@ import {
     getFoldersPaginated,
     getFolderById,
     deleteFolder,
+    copyFolder,
 } from '../../infrastructure/services/folders.service';
 import {
     getAssetsPaginated,
     deleteAsset,
+    copyAsset,
 } from '../../infrastructure/services/assets.service';
 import { getBrandById } from '../../../brands/infrastructure/services/brands.service';
 import { useAuthStore } from '../../../../core/store/authStore';
+import { useClipboardStore } from '../../../../core/store/clipboardStore';
 import { hasPermission } from '../../../../core/utils/permissions';
 import type { FolderDto, FolderBreadcrumbItem } from '../../domain/dto/folders.dto';
 import type { BrandDto } from '../../../brands/domain/dto/brands.dto';
@@ -69,6 +79,11 @@ export const FoldersBrowserPage: React.FC = () => {
     const navigate = useNavigate();
     const user = useAuthStore((state) => state.user);
 
+    // Internal clipboard store
+    const clipboardItems = useClipboardStore((state) => state.items);
+    const copyToClipboard = useClipboardStore((state) => state.copy);
+    const clearClipboard = useClipboardStore((state) => state.clear);
+
     const canCreateFolder = hasPermission(user, 'folders:create');
     const canUpdateFolder = hasPermission(user, 'folders:update');
     const canDeleteFolder = hasPermission(user, 'folders:delete');
@@ -86,6 +101,12 @@ export const FoldersBrowserPage: React.FC = () => {
     const [folders, setFolders] = useState<FolderDto[]>([]);
     const [assets, setAssets] = useState<AssetDto[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isPasting, setIsPasting] = useState(false);
+
+    // Multi-selection state
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
     // Filter tab: 'ALL' | 'FOLDERS' | 'ASSETS'
     const [activeTab, setActiveTab] = useState<'ALL' | 'FOLDERS' | 'ASSETS'>('ALL');
@@ -98,10 +119,11 @@ export const FoldersBrowserPage: React.FC = () => {
     const [q, setQ] = useState('');
     const [searchInputValue, setSearchInputValue] = useState('');
 
-    // Folder Dialogs
+    // Folder Dialogs & Deletion Confirmation State
     const [folderDialogOpen, setFolderDialogOpen] = useState(false);
     const [selectedFolder, setSelectedFolder] = useState<FolderDto | null>(null);
     const [folderToDelete, setFolderToDelete] = useState<FolderDto | null>(null);
+    const [deleteFolderStep, setDeleteFolderStep] = useState<1 | 2>(1);
     const [isDeletingFolder, setIsDeletingFolder] = useState(false);
 
     // Asset Dialogs
@@ -166,6 +188,7 @@ export const FoldersBrowserPage: React.FC = () => {
             ]);
             setFolders(foldersRes.data);
             setAssets(assetsRes.data);
+            setSelectedIds([]);
         } catch {
             setSnackbar({
                 open: true,
@@ -198,6 +221,7 @@ export const FoldersBrowserPage: React.FC = () => {
         setPage(0);
         setQ('');
         setSearchInputValue('');
+        setSelectedIds([]);
     };
 
     // Unified Directory Items
@@ -232,6 +256,38 @@ export const FoldersBrowserPage: React.FC = () => {
         return directoryItems.slice(start, start + limit);
     }, [directoryItems, page, limit]);
 
+    // Selection Handlers
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(paginatedItems.map((item) => item.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectRow = (id: string, checked: boolean) => {
+        if (checked) {
+            setSelectedIds((prev) => [...prev, id]);
+        } else {
+            setSelectedIds((prev) => prev.filter((item) => item !== id));
+        }
+    };
+
+    const selectionConfig: SelectionProps = useMemo(() => {
+        const paginatedIds = paginatedItems.map((item) => item.id);
+        const allSelected = paginatedIds.length > 0 && paginatedIds.every((id) => selectedIds.includes(id));
+        const someSelected = paginatedIds.some((id) => selectedIds.includes(id));
+        return {
+            selectedIds,
+            onSelectAll: handleSelectAll,
+            onSelectRow: handleSelectRow,
+            onSelectionChange: (ids) => setSelectedIds(ids),
+            isAllSelected: allSelected,
+            isIndeterminate: someSelected && !allSelected,
+            enableMarqueeSelect: true,
+        };
+    }, [selectedIds, paginatedItems]);
+
     // Folder Actions
     const handleOpenCreateFolder = () => {
         setSelectedFolder(null);
@@ -243,6 +299,11 @@ export const FoldersBrowserPage: React.FC = () => {
         setFolderDialogOpen(true);
     };
 
+    const handleDeleteFolderClick = (folder: FolderDto) => {
+        setFolderToDelete(folder);
+        setDeleteFolderStep(1);
+    };
+
     const handleConfirmDeleteFolder = async () => {
         if (!folderToDelete) return;
         setIsDeletingFolder(true);
@@ -250,15 +311,16 @@ export const FoldersBrowserPage: React.FC = () => {
             await deleteFolder(folderToDelete.id);
             setSnackbar({
                 open: true,
-                message: 'Directory deleted successfully',
+                message: 'Carpeta y su contenido eliminados exitosamente',
                 severity: 'success',
             });
             setFolderToDelete(null);
+            setDeleteFolderStep(1);
             fetchData();
         } catch (err: any) {
             setSnackbar({
                 open: true,
-                message: err.response?.data?.message || 'Failed to delete directory',
+                message: err.response?.data?.message || 'Error al eliminar la carpeta',
                 severity: 'error',
             });
         } finally {
@@ -293,6 +355,119 @@ export const FoldersBrowserPage: React.FC = () => {
         }
     };
 
+    // Copy Single Item
+    const handleCopyItem = (row: DirectoryItem) => {
+        copyToClipboard({
+            type: row.itemType,
+            id: row.id,
+            name: row.name,
+            brandId: brandId!,
+        });
+        setSnackbar({
+            open: true,
+            message: `${row.itemType === 'FOLDER' ? 'Carpeta' : 'Archivo'} "${row.name}" copiado al portapapeles`,
+            severity: 'success',
+        });
+    };
+
+    // Copy Multiple Selected Items
+    const handleCopySelected = () => {
+        if (selectedIds.length === 0 || !brandId) return;
+        const selectedItems = directoryItems.filter((item) => selectedIds.includes(item.id));
+        const clipboardPayload = selectedItems.map((item) => ({
+            type: item.itemType,
+            id: item.id,
+            name: item.name,
+            brandId: brandId,
+        }));
+
+        copyToClipboard(clipboardPayload);
+        setSnackbar({
+            open: true,
+            message: `${selectedItems.length} elemento(s) copiado(s) al portapapeles`,
+            severity: 'success',
+        });
+        setSelectedIds([]);
+    };
+
+    // Bulk Delete Handlers
+    const handleConfirmBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        setIsBulkDeleting(true);
+        try {
+            const selectedItems = directoryItems.filter((item) => selectedIds.includes(item.id));
+            let successCount = 0;
+
+            for (const item of selectedItems) {
+                try {
+                    if (item.itemType === 'FOLDER') {
+                        await deleteFolder(item.id);
+                    } else {
+                        await deleteAsset(item.id);
+                    }
+                    successCount++;
+                } catch (e) {
+                    console.error(`Error deleting item ${item.name}:`, e);
+                }
+            }
+
+            setSnackbar({
+                open: true,
+                message: `${successCount} elemento(s) eliminado(s) correctamente`,
+                severity: 'success',
+            });
+            setBulkDeleteDialogOpen(false);
+            setSelectedIds([]);
+            fetchData();
+        } catch (err: any) {
+            setSnackbar({
+                open: true,
+                message: err.response?.data?.message || 'Error durante la eliminación múltiple',
+                severity: 'error',
+            });
+        } finally {
+            setIsBulkDeleting(false);
+        }
+    };
+
+    // Paste Handling (Single or Multiple Items)
+    const handlePaste = async () => {
+        if (clipboardItems.length === 0 || !brandId) return;
+        setIsPasting(true);
+        try {
+            let successCount = 0;
+            for (const item of clipboardItems) {
+                if (item.type === 'FOLDER') {
+                    await copyFolder(item.id, {
+                        targetBrandId: brandId,
+                        targetParentId: parentId,
+                    });
+                } else {
+                    await copyAsset(item.id, {
+                        targetBrandId: brandId,
+                        targetFolderId: parentId,
+                    });
+                }
+                successCount++;
+            }
+
+            setSnackbar({
+                open: true,
+                message: `${successCount} elemento(s) pegado(s) exitosamente`,
+                severity: 'success',
+            });
+            fetchData();
+        } catch (err: any) {
+            setSnackbar({
+                open: true,
+                message: err.response?.data?.message || 'Error al pegar elementos',
+                severity: 'error',
+            });
+        } finally {
+            setIsPasting(false);
+        }
+    };
+
     const formatBytes = (bytes: number) => {
         if (!bytes) return '0 B';
         const k = 1024;
@@ -300,6 +475,18 @@ export const FoldersBrowserPage: React.FC = () => {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
+
+    const folderHasContent = (folder: FolderDto | null): boolean => {
+        if (!folder) return false;
+        const children = folder._count?.children ?? 0;
+        const files = folder._count?.assets ?? folder._count?.images ?? 0;
+        return children > 0 || files > 0;
+    };
+
+    const canPaste = Boolean(
+        clipboardItems.length > 0 &&
+        clipboardItems.some((item) => (item.type === 'FOLDER' && canCreateFolder) || (item.type === 'ASSET' && canCreateAsset))
+    );
 
     const columns: Column[] = [
         {
@@ -357,7 +544,6 @@ export const FoldersBrowserPage: React.FC = () => {
                             '&:hover .asset-title': { color: 'primary.main' },
                         }}
                     >
-                        {/* Thumbnail if image, or specific icon if pdf/doc/etc */}
                         {asset.type === 'IMAGE' ? (
                             <Box
                                 component="img"
@@ -566,6 +752,12 @@ export const FoldersBrowserPage: React.FC = () => {
             onClick: (row: DirectoryItem) => handleNavigate(row.id),
         },
         {
+            name: 'Copiar',
+            icon: <ContentCopy fontSize="small" />,
+            visible: () => true,
+            onClick: (row: DirectoryItem) => handleCopyItem(row),
+        },
+        {
             name: 'View Details',
             icon: <Visibility fontSize="small" />,
             visible: (row: DirectoryItem) => row.itemType === 'ASSET',
@@ -596,7 +788,7 @@ export const FoldersBrowserPage: React.FC = () => {
             visible: (row: DirectoryItem) => (row.itemType === 'FOLDER' ? canDeleteFolder : canDeleteAsset),
             onClick: (row: DirectoryItem) => {
                 if (row.itemType === 'FOLDER') {
-                    setFolderToDelete(row.folderData!);
+                    handleDeleteFolderClick(row.folderData!);
                 } else {
                     setAssetToDelete(row.assetData!);
                 }
@@ -610,51 +802,117 @@ export const FoldersBrowserPage: React.FC = () => {
 
     return (
         <Box sx={{ width: '100%', py: 1 }}>
-            {/* Page Header */}
+            {/* Page Header with Responsive Compact Action Buttons */}
             <PageHeader
                 title={brand ? `Directories — ${brand.name}` : 'Directories'}
-                subtitle="Explore folders and media files stored in Cloudflare R2"
+                subtitle="Explore media files stored in folders."
             >
-                <Stack direction="row" spacing={1.5}>
+                <Stack
+                    direction="row"
+                    spacing={{ xs: 0.75, sm: 1.25 }}
+                    sx={{
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: { xs: 0.75, sm: 1 },
+                    }}
+                >
                     <Button
                         variant="outlined"
-                        startIcon={<ArrowBack />}
+                        size="small"
+                        startIcon={<ArrowBack sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                         onClick={() => navigate('/directorios')}
                         sx={{
-                            borderRadius: '10px',
+                            borderRadius: '8px',
                             textTransform: 'none',
+                            fontSize: { xs: '12px', sm: '13px' },
+                            px: { xs: 1, sm: 1.75 },
+                            py: { xs: 0.5, sm: 0.75 },
                             color: 'text.secondary',
                             borderColor: 'divider',
                         }}
                     >
-                        Switch Brand
+                        Return to brand
                     </Button>
+
+                    {/* Clipboard Paste Action */}
+                    {canPaste && clipboardItems.length > 0 && (
+                        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                            <Tooltip title={`paste ${clipboardItems.length} elemet(s) copy(s)`}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    size="small"
+                                    startIcon={isPasting ? <CircularProgress size={14} color="inherit" /> : <ContentPaste sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                                    disabled={isPasting}
+                                    onClick={handlePaste}
+                                    sx={{
+                                        borderRadius: '8px',
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                        fontSize: { xs: '12px', sm: '13px' },
+                                        px: { xs: 1.25, sm: 2 },
+                                        py: { xs: 0.5, sm: 0.75 },
+                                        bgcolor: 'secondary.main',
+                                    }}
+                                >
+                                    paste ({clipboardItems.length})
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title="Limpiar portapapeles">
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={clearClipboard}
+                                    sx={{
+                                        minWidth: 32,
+                                        width: 32,
+                                        height: 32,
+                                        p: 0,
+                                        borderRadius: '8px',
+                                        borderColor: 'divider',
+                                        color: 'text.secondary',
+                                    }}
+                                >
+                                    <Clear sx={{ fontSize: 16 }} />
+                                </Button>
+                            </Tooltip>
+                        </Stack>
+                    )}
+
                     {canCreateFolder && (
                         <Button
                             variant="outlined"
-                            startIcon={<Add />}
+                            size="small"
+                            startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                             onClick={handleOpenCreateFolder}
                             sx={{
-                                borderRadius: '10px',
+                                borderRadius: '8px',
                                 textTransform: 'none',
                                 fontWeight: 600,
+                                fontSize: { xs: '12px', sm: '13px' },
+                                px: { xs: 1.25, sm: 1.75 },
+                                py: { xs: 0.5, sm: 0.75 },
                             }}
                         >
-                            New Folder
+                            New folder
                         </Button>
                     )}
                     {canCreateAsset && (
                         <Button
                             variant="contained"
-                            startIcon={<CloudUpload />}
+                            size="small"
+                            startIcon={<CloudUpload sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                             onClick={() => setUploadDialogOpen(true)}
                             sx={{
-                                borderRadius: '10px',
+                                borderRadius: '8px',
                                 textTransform: 'none',
                                 fontWeight: 600,
+                                fontSize: { xs: '12px', sm: '13px' },
+                                px: { xs: 1.25, sm: 2 },
+                                py: { xs: 0.5, sm: 0.75 },
                             }}
                         >
-                            Upload Asset
+                            Upload
                         </Button>
                     )}
                 </Stack>
@@ -666,6 +924,90 @@ export const FoldersBrowserPage: React.FC = () => {
                 breadcrumbs={breadcrumbs}
                 onNavigate={handleNavigate}
             />
+
+            {/* Multi-Selection Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'stretch', sm: 'center' },
+                        justifyContent: 'space-between',
+                        gap: 1.5,
+                        p: 1.5,
+                        mb: 2,
+                        borderRadius: '12px',
+                        bgcolor: (theme) =>
+                            theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(59, 130, 246, 0.06)',
+                        border: '1px solid',
+                        borderColor: 'primary.main',
+                    }}
+                >
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                        <Chip
+                            label={`${selectedIds.length} seleccionado(s)`}
+                            color="primary"
+                            size="small"
+                            sx={{ fontWeight: 600, fontSize: '12px' }}
+                        />
+                        <Typography variant="body2" sx={{ fontSize: '13px', color: 'text.secondary' }}>
+                            Acciones masivas disponibles
+                        </Typography>
+                    </Stack>
+
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<ContentCopy sx={{ fontSize: 16 }} />}
+                            onClick={handleCopySelected}
+                            sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                fontSize: '12px',
+                            }}
+                        >
+                            Copiar seleccionados
+                        </Button>
+
+                        {(canDeleteFolder || canDeleteAsset) && (
+                            <Button
+                                variant="contained"
+                                color="error"
+                                size="small"
+                                startIcon={<Delete sx={{ fontSize: 16 }} />}
+                                onClick={() => setBulkDeleteDialogOpen(true)}
+                                sx={{
+                                    borderRadius: '8px',
+                                    textTransform: 'none',
+                                    fontWeight: 500,
+                                    fontSize: '12px',
+                                    boxShadow: 'none',
+                                }}
+                            >
+                                Eliminar seleccionados
+                            </Button>
+                        )}
+
+                        <Button
+                            variant="text"
+                            size="small"
+                            startIcon={<Deselect sx={{ fontSize: 16 }} />}
+                            onClick={() => setSelectedIds([])}
+                            sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontSize: '12px',
+                                color: 'text.secondary',
+                            }}
+                        >
+                            Deseleccionar
+                        </Button>
+                    </Stack>
+                </Paper>
+            )}
 
             {/* Search Bar & View Filters */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
@@ -708,11 +1050,12 @@ export const FoldersBrowserPage: React.FC = () => {
                 </Tabs>
             </Box>
 
-            {/* Unified Explorer Table */}
+            {/* Unified Explorer Table with Checkbox Multi-Selection */}
             <ListTable
                 data={paginatedItems}
                 columns={columns}
                 actions={actions}
+                selection={selectionConfig}
                 emptyMessage="No folders or assets found in this directory"
                 pagination={{
                     total: directoryItems.length,
@@ -743,18 +1086,94 @@ export const FoldersBrowserPage: React.FC = () => {
                 initialData={selectedFolder}
             />
 
+            {/* Folder Deletion: Single vs Double Confirmation */}
+            {folderToDelete && !folderHasContent(folderToDelete) && (
+                <ConfirmDialog
+                    open={Boolean(folderToDelete)}
+                    title="Delete Folder?"
+                    description={
+                        <span>
+                            Are you sure you want to delete folder <strong>{folderToDelete.name}</strong>?
+                        </span>
+                    }
+                    onClose={() => setFolderToDelete(null)}
+                    onConfirm={handleConfirmDeleteFolder}
+                    isLoading={isDeletingFolder}
+                    confirmText="Delete"
+                    confirmColor="error"
+                />
+            )}
+
+            {folderToDelete && folderHasContent(folderToDelete) && deleteFolderStep === 1 && (
+                <ConfirmDialog
+                    open={Boolean(folderToDelete)}
+                    title="Eliminar carpeta"
+                    description={
+                        <span>
+                            Esta carpeta contiene contenido.
+                            <br />
+                            <br />
+                            Si continúas, se eliminarán las carpetas y archivos que contiene.
+                            <br />
+                            <br />
+                            ¿Deseas continuar?
+                        </span>
+                    }
+                    onClose={() => setFolderToDelete(null)}
+                    onConfirm={() => setDeleteFolderStep(2)}
+                    confirmText="Continuar"
+                    confirmColor="warning"
+                />
+            )}
+
+            {folderToDelete && folderHasContent(folderToDelete) && deleteFolderStep === 2 && (
+                <ConfirmDialog
+                    open={Boolean(folderToDelete)}
+                    title="⚠ Esta acción eliminará contenido"
+                    description={
+                        <span>
+                            La carpeta contiene archivos y/o subcarpetas.
+                            <br />
+                            <br />
+                            Al eliminarla se eliminarán permanentemente todas las imágenes y archivos que contiene, tanto del sistema como del almacenamiento.
+                            <br />
+                            <br />
+                            Esta acción no se puede deshacer.
+                            <br />
+                            <br />
+                            <strong>¿Está completamente seguro?</strong>
+                        </span>
+                    }
+                    onClose={() => {
+                        setFolderToDelete(null);
+                        setDeleteFolderStep(1);
+                    }}
+                    onConfirm={handleConfirmDeleteFolder}
+                    isLoading={isDeletingFolder}
+                    confirmText="Eliminar definitivamente"
+                    confirmColor="error"
+                />
+            )}
+
+            {/* Bulk Deletion Confirmation Dialog */}
             <ConfirmDialog
-                open={Boolean(folderToDelete)}
-                title="Delete Folder?"
+                open={bulkDeleteDialogOpen}
+                title="¿Eliminar elementos seleccionados?"
                 description={
                     <span>
-                        Are you sure you want to delete folder <strong>{folderToDelete?.name}</strong>? All its subfolders will also be deleted.
+                        Está a punto de eliminar <strong>{selectedIds.length} elemento(s)</strong> seleccionados (carpetas y/o archivos).
+                        <br />
+                        <br />
+                        Las carpetas eliminarán recursivamente todas sus subcarpetas y archivos, tanto de la base de datos como de Cloudflare R2.
+                        <br />
+                        <br />
+                        <strong>Esta acción no se puede deshacer. ¿Desea continuar?</strong>
                     </span>
                 }
-                onClose={() => setFolderToDelete(null)}
-                onConfirm={handleConfirmDeleteFolder}
-                isLoading={isDeletingFolder}
-                confirmText="Delete"
+                onClose={() => setBulkDeleteDialogOpen(false)}
+                onConfirm={handleConfirmBulkDelete}
+                isLoading={isBulkDeleting}
+                confirmText="Eliminar seleccionados"
                 confirmColor="error"
             />
 

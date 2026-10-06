@@ -20,6 +20,10 @@ export declare class PrismaUsersRepository implements UsersRepository {
         name: string;
         description: string | null;
     }[]>;
+    activate(id: string): Promise<GetUser>;
+    findByIdWithPassword(id: string): Promise<User | null>;
+    updatePassword(id: string, passwordHash: string): Promise<void>;
+    updateVerification(id: string, isVerify: boolean): Promise<void>;
     disable(id: string): Promise<GetUser>;
     softDelete(id: string): Promise<GetUser>;
 }

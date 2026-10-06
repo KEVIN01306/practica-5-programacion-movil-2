@@ -5,6 +5,7 @@ export interface AuthUser {
     email: string;
     passwordHash: string;
     isActive: boolean;
+    isVerify: boolean;
     permissions: string[];
     roles: string[];
     createdAt?: Date;

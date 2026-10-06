@@ -4,6 +4,7 @@ import type {
     FolderDetailDto,
     CreateFolderDto,
     UpdateFolderDto,
+    CopyFolderDto,
 } from '../../domain/dto/folders.dto';
 
 interface ApiResponse<T> {
@@ -73,6 +74,12 @@ export const updateFolder = async (id: string, data: UpdateFolderDto): Promise<F
     return response.data.data;
 };
 
+export const copyFolder = async (id: string, data: CopyFolderDto): Promise<FolderDto> => {
+    const response = await api.post<ApiResponse<FolderDto>>(`/folders/${id}/copy`, data);
+    return response.data.data;
+};
+
 export const deleteFolder = async (id: string): Promise<void> => {
     await api.delete(`/folders/${id}`);
 };
+

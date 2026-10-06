@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -29,7 +30,6 @@ import {
 import { useAuthStore } from '../../../../core/store/authStore';
 import { getCurrentUser } from '../../../auth/infrastructure/services/auth.service';
 import type { AuthUser } from '../../../auth/domain/interfaces/auth.interfaces';
-import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 
 interface ProfileRowProps {
     icon?: React.ReactNode;
@@ -133,12 +133,12 @@ const GoogleCard: React.FC<{
 );
 
 export const ProfilePage: React.FC = () => {
+    const navigate = useNavigate();
     const { user: cachedUser, accessToken, setUser } = useAuthStore();
     const [profile, setProfile] = useState<AuthUser | null>(cachedUser);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
-    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'error' }>({
         open: false,
         message: '',
@@ -413,10 +413,11 @@ export const ProfilePage: React.FC = () => {
                     label="Contraseña de Acceso"
                     value={
                         <Button
+                            id="profile-change-password-btn"
                             variant="outlined"
                             size="small"
                             startIcon={<LockResetOutlined sx={{ fontSize: 16 }} />}
-                            onClick={() => setPasswordDialogOpen(true)}
+                            onClick={() => navigate('/auth/change-password')}
                             sx={{
                                 borderRadius: '8px',
                                 textTransform: 'none',
@@ -469,18 +470,6 @@ export const ProfilePage: React.FC = () => {
                 />
             </GoogleCard>
 
-            <ChangePasswordDialog
-                open={passwordDialogOpen}
-                onClose={() => setPasswordDialogOpen(false)}
-                onSuccess={() => {
-                    setSnackbar({
-                        open: true,
-                        message: 'Contraseña actualizada exitosamente',
-                        severity: 'success',
-                    });
-                }}
-            />
-
             <Snackbar
                 open={snackbar.open}
                 autoHideDuration={3000}
@@ -500,3 +489,4 @@ export const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
+

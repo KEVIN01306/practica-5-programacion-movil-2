@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ALLOWED_USER_EMAIL_DOMAINS = ['pharmadel.com', 'cadimportinc.com'] as const;
+export const ALLOWED_USER_EMAIL_DOMAINS = ['pharmadel.com', 'cadimportinc.com', 'gmail.com'] as const;
 
 export const isValidUserEmailDomain = (email?: string | null): boolean => {
     if (!email || typeof email !== 'string') return false;
@@ -11,32 +11,44 @@ export const isValidUserEmailDomain = (email?: string | null): boolean => {
     return (ALLOWED_USER_EMAIL_DOMAINS as readonly string[]).includes(domain);
 };
 
-export const createUserSchema = z.object({
-    email: z
-        .string()
-        .trim()
-        .min(1, 'El correo electrónico es requerido')
-        .email('Ingrese un correo electrónico válido')
-        .refine(isValidUserEmailDomain, {
-            message: 'Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.',
-        }),
-    passwordRaw: z
-        .string()
-        .min(8, 'Password must be at least 8 characters long'),
-    firstName: z
-        .string()
-        .trim()
-        .min(1, 'First name is required')
-        .max(50, 'Maximum 50 characters'),
-    lastName: z
-        .string()
-        .trim()
-        .min(1, 'Last name is required')
-        .max(50, 'Maximum 50 characters'),
-    roles: z
-        .array(z.string())
-        .min(1, 'Please select at least one role for the user'),
-});
+export const createUserSchema = z
+    .object({
+        email: z
+            .string()
+            .trim()
+            .min(1, 'El correo electrónico es requerido')
+            .email('Ingrese un correo electrónico válido')
+            .refine(isValidUserEmailDomain, {
+                message: 'Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.',
+            }),
+        passwordRaw: z.string().optional().or(z.literal('')),
+        autoGeneratePassword: z.boolean().optional(),
+        firstName: z
+            .string()
+            .trim()
+            .min(1, 'First name is required')
+            .max(50, 'Maximum 50 characters'),
+        lastName: z
+            .string()
+            .trim()
+            .min(1, 'Last name is required')
+            .max(50, 'Maximum 50 characters'),
+        roles: z
+            .array(z.string())
+            .min(1, 'Please select at least one role for the user'),
+    })
+    .refine(
+        (data) => {
+            if (!data.autoGeneratePassword) {
+                return typeof data.passwordRaw === 'string' && data.passwordRaw.length >= 8;
+            }
+            return true;
+        },
+        {
+            message: 'La contraseña debe tener al menos 8 caracteres',
+            path: ['passwordRaw'],
+        }
+    );
 
 export const updateUserSchema = z.object({
     email: z

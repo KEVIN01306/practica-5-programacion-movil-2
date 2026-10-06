@@ -1,28 +1,49 @@
 import AppError from "../../../shared/errors/AppError.js";
 import { UniqueConstraintError } from "../../../shared/db/database/errors/UniqueConstraintError.js";
+import { isValidUserEmailDomain } from "../presentation/users.schemas.js";
+import { generateSecurePassword } from "../../../shared/utils/password-generator.util.js";
 export class CreateUserUseCase {
     usersRepository;
     hashProvider;
+    emailProvider;
     auditLogService;
-    constructor(usersRepository, hashProvider, auditLogService) {
+    constructor(usersRepository, hashProvider, emailProvider, auditLogService) {
         this.usersRepository = usersRepository;
         this.hashProvider = hashProvider;
+        this.emailProvider = emailProvider;
         this.auditLogService = auditLogService;
     }
     async execute(data, context) {
         try {
+            if (!isValidUserEmailDomain(data.email)) {
+                throw new AppError("Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.", "INVALID_EMAIL_DOMAIN", 400);
+            }
             const existingUser = await this.usersRepository.findByEmail(data.email);
             if (existingUser) {
                 throw new AppError("Email already in use", "EMAIL_ALREADY_EXISTS", 400);
             }
-            const passwordHash = await this.hashProvider.hash(data.passwordRaw);
+            // Determine or generate secure password
+            let rawPassword = data.passwordRaw?.trim();
+            if (data.autoGeneratePassword || !rawPassword) {
+                rawPassword = generateSecurePassword(12);
+            }
+            if (rawPassword.length < 8) {
+                throw new AppError("Password must be at least 8 characters long", "INVALID_PASSWORD_LENGTH", 400);
+            }
+            const passwordHash = await this.hashProvider.hash(rawPassword);
+            // User starts unverified (isVerify = false)
             const user = await this.usersRepository.create({
                 email: data.email,
                 passwordHash,
                 firstName: data.firstName,
                 lastName: data.lastName,
-                roles: data.roles
+                roles: data.roles,
+                isVerify: false,
             });
+            // Send credentials email via OTP / Email microservice (POST /api/v1/email/send)
+            const fullName = `${user.firstName} ${user.lastName}`.trim();
+            const emailResult = await this.emailProvider.sendWelcomeCredentialsEmail(user.email, fullName, rawPassword);
+            // Record audit log
             await this.auditLogService.record({
                 userId: context?.userId,
                 action: 'CREATE',
@@ -34,10 +55,18 @@ export class CreateUserUseCase {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     roles: user.roles,
-                    isActive: user.isActive
+                    isActive: user.isActive,
+                    isVerify: false,
+                    welcomeEmailSent: emailResult.success,
+                    emailMessageId: emailResult.messageId || null,
                 }
             });
-            return user;
+            return {
+                ...user,
+                isVerify: false,
+                emailSent: emailResult.success,
+                generatedPassword: data.autoGeneratePassword ? rawPassword : undefined,
+            };
         }
         catch (error) {
             if (error instanceof UniqueConstraintError) {

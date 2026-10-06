@@ -7,6 +7,7 @@ export class UsersMapper {
             firstName: user.firstName,
             lastName: user.lastName,
             isActive: user.isActive,
+            isVerify: Boolean(user.isVerify),
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
@@ -19,6 +20,7 @@ export class UsersMapper {
             firstName: user.firstName,
             lastName: user.lastName,
             isActive: user.isActive,
+            isVerify: Boolean(user.isVerify),
             roles,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
@@ -32,6 +34,7 @@ export class UsersMapper {
             firstName: user.firstName,
             lastName: user.lastName,
             isActive: user.isActive,
+            isVerify: Boolean(user.isVerify),
             roles
         };
     }

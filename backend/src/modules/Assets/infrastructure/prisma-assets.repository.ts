@@ -172,6 +172,66 @@ export class PrismaAssetsRepository implements AssetsRepository {
         }
     }
 
+    async findByNameAndFolder(name: string, brandId: string, folderId: string | null): Promise<AssetEntity | null> {
+        try {
+            const asset = await this.prisma.asset.findFirst({
+                where: {
+                    name,
+                    brandId,
+                    folderId: folderId === null ? null : folderId,
+                },
+                include: {
+                    brand: { select: { id: true, name: true } },
+                    folder: { select: { id: true, name: true } },
+                },
+            });
+
+            return asset ? AssetsMapper.toDomain(asset) : null;
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
+    async findByFileNameAndFolder(fileName: string, brandId: string, folderId: string | null): Promise<AssetEntity | null> {
+        try {
+            const asset = await this.prisma.asset.findFirst({
+                where: {
+                    fileName,
+                    brandId,
+                    folderId: folderId === null ? null : folderId,
+                },
+                include: {
+                    brand: { select: { id: true, name: true } },
+                    folder: { select: { id: true, name: true } },
+                },
+            });
+
+            return asset ? AssetsMapper.toDomain(asset) : null;
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
+    async findByFolderIds(folderIds: string[]): Promise<AssetEntity[]> {
+        try {
+            if (folderIds.length === 0) return [];
+
+            const records = await this.prisma.asset.findMany({
+                where: {
+                    folderId: { in: folderIds },
+                },
+                include: {
+                    brand: { select: { id: true, name: true } },
+                    folder: { select: { id: true, name: true } },
+                },
+            });
+
+            return records.map(AssetsMapper.toDomain);
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
     async delete(id: string): Promise<void> {
         try {
             await this.prisma.asset.delete({
@@ -181,4 +241,18 @@ export class PrismaAssetsRepository implements AssetsRepository {
             throw PrismaErrorMapper.map(error);
         }
     }
+
+    async deleteMany(ids: string[]): Promise<void> {
+        try {
+            if (ids.length === 0) return;
+            await this.prisma.asset.deleteMany({
+                where: {
+                    id: { in: ids },
+                },
+            });
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
 }
+

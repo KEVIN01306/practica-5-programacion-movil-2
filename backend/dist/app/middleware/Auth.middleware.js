@@ -58,10 +58,11 @@ export class AuthMiddleware {
             if (user.roles && user.roles.includes("SUPER_ADMIN")) {
                 return next();
             }
-            if (!user.permissions) {
+            if (!user.permissions || !Array.isArray(user.permissions)) {
                 return next(new AppError("Not authorized to perform this action", "FORBIDDEN", 403));
             }
-            const hasAllPermissions = permissions.every((permission) => user.permissions.includes(permission));
+            const permList = Array.isArray(permissions) ? permissions : [permissions];
+            const hasAllPermissions = permList.every((permission) => user.permissions.includes(permission));
             if (!hasAllPermissions) {
                 return next(new AppError("Not authorized to perform this action", "FORBIDDEN", 403));
             }
@@ -77,10 +78,11 @@ export class AuthMiddleware {
             if (user.roles && user.roles.includes("SUPER_ADMIN")) {
                 return next();
             }
-            if (!user.permissions) {
+            if (!user.permissions || !Array.isArray(user.permissions)) {
                 return next(new AppError("Not authorized to perform this action", "FORBIDDEN", 403));
             }
-            const hasSomePermissions = permissions.some((permission) => user.permissions.includes(permission));
+            const permList = Array.isArray(permissions) ? permissions : [permissions];
+            const hasSomePermissions = permList.some((permission) => user.permissions.includes(permission));
             if (!hasSomePermissions) {
                 return next(new AppError("Not authorized to perform this action", "FORBIDDEN", 403));
             }

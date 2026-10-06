@@ -10,7 +10,7 @@ export declare class AuthMiddleware {
      * Middleware opcional para validar roles (ADMIN)
      */
     checkRole: (rolesPermitidos: string[]) => (req: Request, res: Response, next: NextFunction) => void;
-    checkPermission: (permissions: string[]) => (req: Request, res: Response, next: NextFunction) => void;
-    checkPermissionSome: (permissions: string[]) => (req: Request, res: Response, next: NextFunction) => void;
+    checkPermission: (permissions: string | string[]) => (req: Request, res: Response, next: NextFunction) => void;
+    checkPermissionSome: (permissions: string | string[]) => (req: Request, res: Response, next: NextFunction) => void;
 }
 //# sourceMappingURL=Auth.middleware.d.ts.map

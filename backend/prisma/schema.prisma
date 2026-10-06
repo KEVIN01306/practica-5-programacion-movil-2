@@ -31,6 +31,7 @@ model User {
   lastName     String   @map("last_name")
   avatarUrl    String?  @map("avatar_url")
   isActive     Boolean  @default(true) @map("is_active")
+  isVerify     Boolean  @default(false) @map("is_verify")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

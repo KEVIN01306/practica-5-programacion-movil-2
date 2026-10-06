@@ -19,6 +19,7 @@ interface LoginResponse {
         email: string;
         permissions: string[];
         roles: string[];
+        isVerify: boolean;
     };
 }
 
@@ -96,6 +97,7 @@ export class LoginUseCase {
                 email: user.email,
                 permissions: user.permissions,
                 roles: user.roles,
+                isVerify: user.isVerify,
             }
         };
     }

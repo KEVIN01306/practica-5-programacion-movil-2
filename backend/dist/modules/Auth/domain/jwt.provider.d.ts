@@ -9,6 +9,14 @@ declare class JwtProvider {
         refreshToken: string;
     }>;
     verifyToken(token: string): Promise<JWTPayload>;
+    private static readonly usedResetTokens;
+    generateResetToken(userId: string, email: string): Promise<string>;
+    verifyResetToken(token: string): Promise<{
+        userId: string;
+        email: string;
+        jti: string;
+    }>;
+    consumeResetToken(jti: string): void;
 }
 export default JwtProvider;
 //# sourceMappingURL=jwt.provider.d.ts.map

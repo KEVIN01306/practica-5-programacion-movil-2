@@ -14,12 +14,18 @@ export class AuthController extends BaseController {
     refreshTokenUseCase;
     getProfileUseCase;
     logoutUseCase;
-    constructor(loginUseCase, refreshTokenUseCase, getProfileUseCase, logoutUseCase) {
+    sendOtpUseCase;
+    verifyOtpUseCase;
+    resetPasswordWithOtpUseCase;
+    constructor(loginUseCase, refreshTokenUseCase, getProfileUseCase, logoutUseCase, sendOtpUseCase, verifyOtpUseCase, resetPasswordWithOtpUseCase) {
         super();
         this.loginUseCase = loginUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
         this.getProfileUseCase = getProfileUseCase;
         this.logoutUseCase = logoutUseCase;
+        this.sendOtpUseCase = sendOtpUseCase;
+        this.verifyOtpUseCase = verifyOtpUseCase;
+        this.resetPasswordWithOtpUseCase = resetPasswordWithOtpUseCase;
     }
     login = async (req, res, next) => {
         try {
@@ -74,6 +80,48 @@ export class AuthController extends BaseController {
             }
             const profile = await this.getProfileUseCase.execute(userCtx.id);
             return res.status(200).json(ResponseHttp.success("Profile fetched", profile));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    sendOtp = async (req, res, next) => {
+        try {
+            if (!this.sendOtpUseCase) {
+                throw new AppError("Send OTP service not configured", "INTERNAL_SERVER_ERROR", 500);
+            }
+            const auditContext = this.getAuditContext(req, res);
+            const result = await this.sendOtpUseCase.execute(req.body, auditContext);
+            return res.status(200).json(ResponseHttp.success(result.message, { expiresAt: result.expiresAt }));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    verifyOtp = async (req, res, next) => {
+        try {
+            if (!this.verifyOtpUseCase) {
+                throw new AppError("Verify OTP service not configured", "INTERNAL_SERVER_ERROR", 500);
+            }
+            const auditContext = this.getAuditContext(req, res);
+            const result = await this.verifyOtpUseCase.execute(req.body, auditContext);
+            return res.status(200).json(ResponseHttp.success(result.message, {
+                verified: result.verified,
+                resetToken: result.resetToken,
+            }));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    resetPassword = async (req, res, next) => {
+        try {
+            if (!this.resetPasswordWithOtpUseCase) {
+                throw new AppError("Reset password service not configured", "INTERNAL_SERVER_ERROR", 500);
+            }
+            const auditContext = this.getAuditContext(req, res);
+            await this.resetPasswordWithOtpUseCase.execute(req.body, auditContext);
+            return res.status(200).json(ResponseHttp.success("Contraseña actualizada exitosamente", null));
         }
         catch (error) {
             next(error);

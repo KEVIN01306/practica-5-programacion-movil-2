@@ -1,18 +1,22 @@
 import type { FoldersRepository } from "../domain/folders.repository.js";
+import type { AssetsRepository } from "../../Assets/domain/assets.repository.js";
+import type { StorageProvider } from "@shared/domain/storage.provider.js";
 import type { UpdateFolder, GetFolder } from "../domain/folder.entity.js";
 import type { AuditLogService } from "../../Audit/application/audit-log.service.js";
 import type { AuditContext } from "../../Audit/domain/audit-log.entity.js";
+import { StoragePathHelper } from "../../Assets/application/services/storage-path.helper.js";
 import AppError from "@shared/errors/AppError.js";
 import { UniqueConstraintError } from "@shared/db/database/errors/UniqueConstraintError.js";
 
 export class UpdateFolderUseCase {
     constructor(
         private readonly foldersRepository: FoldersRepository,
+        private readonly assetsRepository: AssetsRepository,
+        private readonly storageProvider: StorageProvider,
         private readonly auditLogService: AuditLogService
-    ) { }
+    ) {}
 
     async execute(id: string, data: UpdateFolder, context?: AuditContext): Promise<GetFolder> {
-
         try {
             const existing = await this.foldersRepository.findById(id);
             if (!existing) {
@@ -45,9 +49,10 @@ export class UpdateFolderUseCase {
             }
 
             const targetName = data.name !== undefined ? data.name.trim() : existing.name;
+            const hasStructuralChange = targetName !== existing.name || newParentId !== existing.parentId;
 
             // If name or parentId changed, verify uniqueness
-            if (targetName !== existing.name || newParentId !== existing.parentId) {
+            if (hasStructuralChange) {
                 const duplicate = await this.foldersRepository.findByNameAndParent(targetName, existing.brandId, newParentId);
                 if (duplicate && duplicate.id !== id) {
                     throw new AppError("A folder with this name already exists in the destination", "FOLDER_NAME_TAKEN", 400);
@@ -57,29 +62,59 @@ export class UpdateFolderUseCase {
             const updated = await this.foldersRepository.update(id, {
                 name: data.name !== undefined ? targetName : undefined,
                 description: data.description !== undefined ? (data.description ? data.description.trim() : null) : undefined,
-                parentId: data.parentId !== undefined ? newParentId : undefined
+                parentId: data.parentId !== undefined ? newParentId : undefined,
             });
+
+            // If folder name or parent changed, migrate all physical asset storage paths
+            if (hasStructuralChange) {
+                try {
+                    const subfolderIds = await this.foldersRepository.findSubfolderIdsRecursive(id);
+                    const affectedAssets = await this.assetsRepository.findByFolderIds(subfolderIds);
+
+                    for (const asset of affectedAssets) {
+                        const oldKey = this.storageProvider.extractKeyFromUrl(asset.url);
+                        if (!oldKey) continue;
+
+                        const fileName = oldKey.split("/").pop() || asset.fileName;
+                        const newKey = await StoragePathHelper.resolveAndBuildKey(
+                            asset.brandId,
+                            asset.folderId,
+                            fileName,
+                            this.foldersRepository
+                        );
+
+                        if (oldKey !== newKey) {
+                            const moveResult = await this.storageProvider.move(oldKey, newKey);
+                            await this.assetsRepository.update(asset.id, {
+                                url: moveResult.url,
+                            });
+                        }
+                    }
+                } catch (migrationError) {
+                    console.error("Error migrating physical asset paths on folder update:", migrationError);
+                    // Continue returning updated folder, but log error
+                }
+            }
 
             await this.auditLogService.record({
                 userId: context?.userId,
-                action: 'UPDATE',
-                resource: 'folder',
+                action: "UPDATE",
+                resource: "folder",
                 resourceId: updated.id,
                 context,
                 before: {
                     name: existing.name,
                     description: existing.description,
-                    parentId: existing.parentId
+                    parentId: existing.parentId,
                 },
                 after: {
                     name: updated.name,
                     description: updated.description,
-                    parentId: updated.parentId
-                }
+                    parentId: updated.parentId,
+                },
             });
 
             return updated;
-
         } catch (error) {
             if (error instanceof UniqueConstraintError) {
                 throw new AppError("A folder with this name already exists in the destination", "FOLDER_NAME_TAKEN", 400);
@@ -91,3 +126,4 @@ export class UpdateFolderUseCase {
         }
     }
 }
+

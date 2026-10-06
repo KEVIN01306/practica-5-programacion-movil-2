@@ -4,7 +4,7 @@ import routes from './routes/index.routes.js';
 import cookieParser from 'cookie-parser';
 const app = express();
 app.use(cors({
-    origin: ['http://localhost:3001'],
+    origin: ['http://localhost:4001'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -14,6 +14,6 @@ app.set('trust proxy', true);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
-app.use(routes);
+app.use('/api', routes);
 export default app;
 //# sourceMappingURL=app.js.map

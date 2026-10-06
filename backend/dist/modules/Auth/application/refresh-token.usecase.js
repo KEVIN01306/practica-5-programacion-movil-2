@@ -32,6 +32,7 @@ export class RefreshTokenUseCase {
                 email: user.email,
                 permissions: user.permissions,
                 roles: user.roles,
+                isVerify: user.isVerify,
             }
         };
     }

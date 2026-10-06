@@ -17,6 +17,7 @@ export class PrismaUsersRepository implements UsersRepository {
                     firstName: data.firstName,
                     lastName: data.lastName,
                     isActive: true,
+                    isVerify: data.isVerify !== undefined ? data.isVerify : false,
                     userRoles: {
                         create: roleNames.map(name => ({
                             role: {
@@ -222,6 +223,17 @@ export class PrismaUsersRepository implements UsersRepository {
             await this.prisma.user.update({
                 where: { id },
                 data: { passwordHash }
+            });
+        } catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+
+    async updateVerification(id: string, isVerify: boolean): Promise<void> {
+        try {
+            await this.prisma.user.update({
+                where: { id },
+                data: { isVerify }
             });
         } catch (error) {
             throw PrismaErrorMapper.map(error);

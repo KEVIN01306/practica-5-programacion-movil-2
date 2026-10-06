@@ -8,6 +8,7 @@ import {
     CreateAssetBodySchema,
     UpdateAssetBodySchema,
     ListAssetsQuerySchema,
+    CopyAssetBodySchema,
 } from "./validators/assets.schemas.js";
 
 const router = Router();
@@ -40,6 +41,15 @@ router.post(
     assetsController.create
 );
 
+// POST /:id/copy: duplicate asset
+router.post(
+    "/:id/copy",
+    authMiddleware.checkPermission("assets:create"),
+    validatedMiddleware.validateParams(AssetIdSchema),
+    validatedMiddleware.validateBody(CopyAssetBodySchema),
+    assetsController.copy
+);
+
 // PATCH: file is optional (if provided, replaces physical object)
 router.patch(
     "/:id",
@@ -56,5 +66,6 @@ router.delete(
     validatedMiddleware.validateParams(AssetIdSchema),
     assetsController.delete
 );
+
 
 export default router;

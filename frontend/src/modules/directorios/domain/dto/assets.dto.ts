@@ -60,3 +60,9 @@ export interface UpdateAssetPayload {
     folderId?: string | null;
     file?: File | null;
 }
+
+export interface CopyAssetPayload {
+    targetBrandId: string;
+    targetFolderId?: string | null;
+}
+

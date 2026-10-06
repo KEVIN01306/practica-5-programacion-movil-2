@@ -9,6 +9,7 @@ import { ListAssetsUseCase } from "./application/list-assets.usecase.js";
 import { GetAssetUseCase } from "./application/get-asset.usecase.js";
 import { UpdateAssetUseCase } from "./application/update-asset.usecase.js";
 import { DeleteAssetUseCase } from "./application/delete-asset.usecase.js";
+import { CopyAssetUseCase } from "./application/copy-asset.usecase.js";
 import { AssetsController } from "./presentation/assets.controller.js";
 
 const prisma = new PrismaClient();
@@ -35,17 +36,26 @@ export const updateAssetUseCase = new UpdateAssetUseCase(
     auditLogService
 );
 
+export const copyAssetUseCase = new CopyAssetUseCase(
+    assetsRepository,
+    brandsRepository,
+    foldersRepository,
+    storageProvider,
+    auditLogService
+);
+
 export const deleteAssetUseCase = new DeleteAssetUseCase(
     assetsRepository,
     storageProvider,
     auditLogService
 );
 
-
 export const assetsController = new AssetsController(
     createAssetUseCase,
     listAssetsUseCase,
     getAssetUseCase,
     updateAssetUseCase,
-    deleteAssetUseCase
+    deleteAssetUseCase,
+    copyAssetUseCase
 );
+

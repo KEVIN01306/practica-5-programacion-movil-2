@@ -16,6 +16,7 @@ interface LoginResponse {
         email: string;
         permissions: string[];
         roles: string[];
+        isVerify: boolean;
     };
 }
 export declare class LoginUseCase {

@@ -18,6 +18,7 @@ export class GetProfileUseCase {
             roles: user.roles,
             permissions: user.permissions,
             isActive: user.isActive,
+            isVerify: user.isVerify,
             createdAt: user.createdAt,
         };
     }

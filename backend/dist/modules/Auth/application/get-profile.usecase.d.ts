@@ -8,6 +8,7 @@ interface GetProfileResponse {
     roles: string[];
     permissions: string[];
     isActive: boolean;
+    isVerify: boolean;
     createdAt?: Date;
 }
 export declare class GetProfileUseCase {

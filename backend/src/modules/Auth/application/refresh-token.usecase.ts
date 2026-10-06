@@ -14,6 +14,7 @@ interface RefreshResponse {
         email: string;
         permissions: string[];
         roles: string[];
+        isVerify: boolean;
     }
 }   
 
@@ -69,6 +70,7 @@ export class RefreshTokenUseCase {
                 email: user.email,
                 permissions: user.permissions,
                 roles: user.roles,
+                isVerify: user.isVerify,
             }
         }
     }

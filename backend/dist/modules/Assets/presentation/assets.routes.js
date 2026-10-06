@@ -9,12 +9,12 @@ const authMiddleware = new AuthMiddleware();
 const validatedMiddleware = new ValidatedMiddleware();
 // Protect all asset routes
 router.use(authMiddleware.routeProtect);
-router.get("/", validatedMiddleware.validateQuery(ListAssetsQuerySchema), assetsController.list);
-router.get("/:id", validatedMiddleware.validateParams(AssetIdSchema), assetsController.getById);
+router.get("/", authMiddleware.checkPermission("assets:read"), validatedMiddleware.validateQuery(ListAssetsQuerySchema), assetsController.list);
+router.get("/:id", authMiddleware.checkPermission("assets:read"), validatedMiddleware.validateParams(AssetIdSchema), assetsController.getById);
 // POST: requires a file
-router.post("/", MulterUploadProvider.single("file", true), validatedMiddleware.validateBody(CreateAssetBodySchema), assetsController.create);
+router.post("/", authMiddleware.checkPermission("assets:create"), MulterUploadProvider.single("file", true), validatedMiddleware.validateBody(CreateAssetBodySchema), assetsController.create);
 // PATCH: file is optional (if provided, replaces physical object)
-router.patch("/:id", validatedMiddleware.validateParams(AssetIdSchema), MulterUploadProvider.single("file", false), validatedMiddleware.validateBody(UpdateAssetBodySchema), assetsController.update);
-router.delete("/:id", validatedMiddleware.validateParams(AssetIdSchema), assetsController.delete);
+router.patch("/:id", authMiddleware.checkPermission("assets:update"), validatedMiddleware.validateParams(AssetIdSchema), MulterUploadProvider.single("file", false), validatedMiddleware.validateBody(UpdateAssetBodySchema), assetsController.update);
+router.delete("/:id", authMiddleware.checkPermission("assets:delete"), validatedMiddleware.validateParams(AssetIdSchema), assetsController.delete);
 export default router;
 //# sourceMappingURL=assets.routes.js.map

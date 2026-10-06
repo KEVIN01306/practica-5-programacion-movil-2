@@ -42,3 +42,15 @@ export const ListAssetsQuerySchema = z.object({
     sku: z.string().optional(),
     q: z.string().optional(),
 });
+
+export const CopyAssetBodySchema = z.object({
+    targetBrandId: z.string().uuid("Invalid target brand ID format"),
+    targetFolderId: z
+        .string()
+        .uuid("Invalid target folder ID format")
+        .optional()
+        .nullable()
+        .or(z.literal(""))
+        .or(z.literal("null")),
+});
+

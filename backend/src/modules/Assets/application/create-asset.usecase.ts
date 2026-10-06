@@ -6,8 +6,10 @@ import type { FoldersRepository } from "../../Folders/domain/folders.repository.
 import type { StorageProvider } from "@shared/domain/storage.provider.js";
 import type { AuditLogService } from "../../Audit/application/audit-log.service.js";
 import type { AuditContext } from "../../Audit/domain/audit-log.entity.js";
+import { StoragePathHelper } from "./services/storage-path.helper.js";
 import { AssetType } from "@prisma/client";
 import AppError from "@shared/errors/AppError.js";
+
 
 export class CreateAssetUseCase {
     constructor(
@@ -85,22 +87,33 @@ export class CreateAssetUseCase {
         const extension = parsedExt || null;
         const type = this.determineAssetType(mimeType);
 
-        // 5. Determine base key for R2
+        // 5. Determine base file name for R2
         const rawBase = data.sku && data.sku.trim() ? data.sku.trim() : data.name.trim();
+
         const cleanBase = this.sanitizeName(rawBase);
         const extSuffix = extension ? `.${extension}` : "";
 
         let candidateFileName = `${cleanBase}${extSuffix}`;
-        let candidateUrl = this.storageProvider.getUrl(`assets/${candidateFileName}`);
+        let r2Key = await StoragePathHelper.resolveAndBuildKey(
+            data.brandId,
+            data.folderId || null,
+            candidateFileName,
+            this.foldersRepository
+        );
+        let candidateUrl = this.storageProvider.getUrl(r2Key);
 
         // 6. Collision Avoidance
         const existingWithUrl = await this.assetsRepository.findByUrl(candidateUrl);
         if (existingWithUrl) {
             const uniqueId = Date.now().toString(36);
             candidateFileName = `${cleanBase}_${uniqueId}${extSuffix}`;
+            r2Key = await StoragePathHelper.resolveAndBuildKey(
+                data.brandId,
+                data.folderId || null,
+                candidateFileName,
+                this.foldersRepository
+            );
         }
-
-        const r2Key = `assets/${candidateFileName}`;
 
         // 7. Upload to Cloudflare R2
         const uploadResult = await this.storageProvider.upload({
@@ -108,6 +121,7 @@ export class CreateAssetUseCase {
             buffer: data.file.buffer,
             mimeType,
         });
+
 
         // 8. Create Asset in Database with Rollback / Compensation
         try {

@@ -48,7 +48,11 @@ const LoginPage = () => {
         try {
             const response = await loginUser(values);
             setAuth(response.accessToken, response.user);
-            navigate(from, { replace: true });
+            if (response.user.isVerify === false) {
+                navigate('/auth/verify-account', { replace: true });
+            } else {
+                navigate(from, { replace: true });
+            }
         } catch {
             setServerError('Invalid email or password. Please try again.');
         }
@@ -180,6 +184,29 @@ const LoginPage = () => {
                                         />
                                     )}
                                 />
+
+                                {/* Forgot password link */}
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
+                                    <Button
+                                        variant="text"
+                                        size="small"
+                                        onClick={() => navigate('/auth/change-password')}
+                                        sx={{
+                                            textTransform: 'none',
+                                            fontSize: '12.5px',
+                                            fontWeight: 500,
+                                            color: '#006bff',
+                                            p: 0,
+                                            minWidth: 'auto',
+                                            '&:hover': {
+                                                bgcolor: 'transparent',
+                                                textDecoration: 'underline',
+                                            },
+                                        }}
+                                    >
+                                        Forgot password?
+                                    </Button>
+                                </Box>
 
                                 {/* Submit — Primary Signal Blue CTA */}
                                 <Button

@@ -17,7 +17,10 @@ export interface FoldersRepository {
         filters?: FolderFilter
     ): Promise<{ data: GetFolder[]; total: number }>;
     findAllByBrandAndParent(brandId: string, parentId: string | null): Promise<GetFolder[]>;
+    findAllChildren(parentId: string): Promise<GetFolder[]>;
     getBreadcrumbs(folderId: string): Promise<Array<{ id: string; name: string; parentId: string | null }>>;
     isDescendant(folderId: string, potentialChildId: string): Promise<boolean>;
+    findSubfolderIdsRecursive(folderId: string): Promise<string[]>;
     delete(id: string): Promise<void>;
 }
+

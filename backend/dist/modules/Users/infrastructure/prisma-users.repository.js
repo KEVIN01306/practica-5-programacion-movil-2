@@ -15,6 +15,7 @@ export class PrismaUsersRepository {
                     firstName: data.firstName,
                     lastName: data.lastName,
                     isActive: true,
+                    isVerify: data.isVerify !== undefined ? data.isVerify : false,
                     userRoles: {
                         create: roleNames.map(name => ({
                             role: {
@@ -172,6 +173,58 @@ export class PrismaUsersRepository {
             return await this.prisma.role.findMany({
                 select: { id: true, name: true, description: true },
                 orderBy: { name: 'asc' }
+            });
+        }
+        catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+    async activate(id) {
+        try {
+            const user = await this.prisma.user.update({
+                where: { id },
+                data: { isActive: true },
+                include: {
+                    userRoles: {
+                        select: {
+                            role: { select: { name: true } }
+                        }
+                    }
+                }
+            });
+            return UsersMapper.toGetUser(user);
+        }
+        catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+    async findByIdWithPassword(id) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id }
+            });
+            return user ? UsersMapper.toDomain(user) : null;
+        }
+        catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+    async updatePassword(id, passwordHash) {
+        try {
+            await this.prisma.user.update({
+                where: { id },
+                data: { passwordHash }
+            });
+        }
+        catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+    async updateVerification(id, isVerify) {
+        try {
+            await this.prisma.user.update({
+                where: { id },
+                data: { isVerify }
             });
         }
         catch (error) {

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { foldersController } from "../folders.module.js";
 import { AuthMiddleware } from "@app/middleware/Auth.middleware.js";
 import { ValidatedMiddleware } from "@app/middleware/Validated.middleware.js";
-import { CreateFolderSchema, UpdateFolderSchema, FolderIdSchema } from "./validators/folders.schemas.js";
+import { CreateFolderSchema, UpdateFolderSchema, FolderIdSchema, CopyFolderSchema } from "./validators/folders.schemas.js";
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();
@@ -31,6 +31,15 @@ router.post(
     foldersController.create
 );
 
+// POST /:id/copy: duplicate folder recursively
+router.post(
+    "/:id/copy",
+    authMiddleware.checkPermission("folders:create"),
+    validatedMiddleware.validateParams(FolderIdSchema),
+    validatedMiddleware.validateBody(CopyFolderSchema),
+    foldersController.copy
+);
+
 router.put(
     "/:id",
     authMiddleware.checkPermission("folders:update"),
@@ -47,3 +56,4 @@ router.delete(
 );
 
 export default router;
+

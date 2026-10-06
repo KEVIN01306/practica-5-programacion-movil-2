@@ -8,6 +8,7 @@ export interface AuthUser {
     roles?: string[];
     permissions: string[];
     isActive?: boolean;
+    isVerify?: boolean;
     createdAt?: string | Date;
 }
 

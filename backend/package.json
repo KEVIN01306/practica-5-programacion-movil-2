@@ -5,7 +5,7 @@
   "main": "server.ts",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npx tsx src/modules/Auth/auth-password-reset.test.ts && npx tsx src/modules/Users/user-creation-activation.test.ts",
     "dev": "cross-env NODE_ENV=development nodemon --exec node --import tsx src/server.ts",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",

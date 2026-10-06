@@ -1,21 +1,26 @@
 import ResponseHttp from "../../../app/http/response.http.js";
 import BaseController from "../../../presentation/base.controller.js";
+import AppError from "../../../shared/errors/AppError.js";
 export class UsersController extends BaseController {
     createUserUseCase;
     updateUserUseCase;
     listUsersUseCase;
     listRolesUseCase;
+    activateUserUseCase;
     disableUserUseCase;
     deleteUserUseCase;
+    changePasswordUseCase;
     hashProvider;
-    constructor(createUserUseCase, updateUserUseCase, listUsersUseCase, listRolesUseCase, disableUserUseCase, deleteUserUseCase, hashProvider) {
+    constructor(createUserUseCase, updateUserUseCase, listUsersUseCase, listRolesUseCase, activateUserUseCase, disableUserUseCase, deleteUserUseCase, changePasswordUseCase, hashProvider) {
         super();
         this.createUserUseCase = createUserUseCase;
         this.updateUserUseCase = updateUserUseCase;
         this.listUsersUseCase = listUsersUseCase;
         this.listRolesUseCase = listRolesUseCase;
+        this.activateUserUseCase = activateUserUseCase;
         this.disableUserUseCase = disableUserUseCase;
         this.deleteUserUseCase = deleteUserUseCase;
+        this.changePasswordUseCase = changePasswordUseCase;
         this.hashProvider = hashProvider;
     }
     create = async (req, res, next) => {
@@ -71,12 +76,37 @@ export class UsersController extends BaseController {
             next(error);
         }
     };
+    activate = async (req, res, next) => {
+        try {
+            const id = req.params.id;
+            const auditContext = this.getAuditContext(req, res);
+            const user = await this.activateUserUseCase.execute(id, auditContext);
+            return res.status(200).json(ResponseHttp.success("User reactivated successfully", user));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
     disable = async (req, res, next) => {
         try {
             const id = req.params.id;
             const auditContext = this.getAuditContext(req, res);
             const user = await this.disableUserUseCase.execute(id, auditContext);
             return res.status(200).json(ResponseHttp.success("User disabled successfully", user));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    changePassword = async (req, res, next) => {
+        try {
+            const userCtx = req.user || res.locals.user;
+            if (!userCtx?.id) {
+                throw new AppError("Unauthorized", "UNAUTHORIZED", 401);
+            }
+            const auditContext = this.getAuditContext(req, res);
+            await this.changePasswordUseCase.execute(userCtx.id, req.body, auditContext);
+            return res.status(200).json(ResponseHttp.success("Password changed successfully", null));
         }
         catch (error) {
             next(error);

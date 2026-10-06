@@ -43,3 +43,9 @@ export interface UpdateFolderDto {
     description?: string | null;
     parentId?: string | null;
 }
+
+export interface CopyFolderDto {
+    targetBrandId: string;
+    targetParentId?: string | null;
+}
+

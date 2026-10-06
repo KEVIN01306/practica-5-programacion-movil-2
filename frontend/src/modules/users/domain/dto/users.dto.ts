@@ -17,7 +17,8 @@ export interface UserDto {
 
 export interface CreateUserDto {
     email: string;
-    passwordRaw: string;
+    passwordRaw?: string;
+    autoGeneratePassword?: boolean;
     firstName: string;
     lastName: string;
     roles: string[];
