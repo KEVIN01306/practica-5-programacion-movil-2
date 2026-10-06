@@ -1,4 +1,5 @@
 import path from "path";
+import { StoragePathHelper } from "./services/storage-path.helper.js";
 import { AssetType } from "@prisma/client";
 import AppError from "../../../shared/errors/AppError.js";
 export class CreateAssetUseCase {
@@ -73,19 +74,20 @@ export class CreateAssetUseCase {
         const parsedExt = path.extname(originalName).replace(/^\./, "").toLowerCase();
         const extension = parsedExt || null;
         const type = this.determineAssetType(mimeType);
-        // 5. Determine base key for R2
+        // 5. Determine base file name for R2
         const rawBase = data.sku && data.sku.trim() ? data.sku.trim() : data.name.trim();
         const cleanBase = this.sanitizeName(rawBase);
         const extSuffix = extension ? `.${extension}` : "";
         let candidateFileName = `${cleanBase}${extSuffix}`;
-        let candidateUrl = this.storageProvider.getUrl(`assets/${candidateFileName}`);
+        let r2Key = await StoragePathHelper.resolveAndBuildKey(data.brandId, data.folderId || null, candidateFileName, this.foldersRepository);
+        let candidateUrl = this.storageProvider.getUrl(r2Key);
         // 6. Collision Avoidance
         const existingWithUrl = await this.assetsRepository.findByUrl(candidateUrl);
         if (existingWithUrl) {
             const uniqueId = Date.now().toString(36);
             candidateFileName = `${cleanBase}_${uniqueId}${extSuffix}`;
+            r2Key = await StoragePathHelper.resolveAndBuildKey(data.brandId, data.folderId || null, candidateFileName, this.foldersRepository);
         }
-        const r2Key = `assets/${candidateFileName}`;
         // 7. Upload to Cloudflare R2
         const uploadResult = await this.storageProvider.upload({
             key: r2Key,

@@ -6,13 +6,15 @@ export class FoldersController extends BaseController {
     getFolderUseCase;
     updateFolderUseCase;
     deleteFolderUseCase;
-    constructor(createFolderUseCase, listFoldersUseCase, getFolderUseCase, updateFolderUseCase, deleteFolderUseCase) {
+    copyFolderUseCase;
+    constructor(createFolderUseCase, listFoldersUseCase, getFolderUseCase, updateFolderUseCase, deleteFolderUseCase, copyFolderUseCase) {
         super();
         this.createFolderUseCase = createFolderUseCase;
         this.listFoldersUseCase = listFoldersUseCase;
         this.getFolderUseCase = getFolderUseCase;
         this.updateFolderUseCase = updateFolderUseCase;
         this.deleteFolderUseCase = deleteFolderUseCase;
+        this.copyFolderUseCase = copyFolderUseCase;
     }
     create = async (req, res, next) => {
         try {
@@ -65,6 +67,24 @@ export class FoldersController extends BaseController {
             const auditContext = this.getAuditContext(req, res);
             const folder = await this.updateFolderUseCase.execute(id, data, auditContext);
             return res.status(200).json(ResponseHttp.success("Folder updated successfully", folder));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    copy = async (req, res, next) => {
+        try {
+            const id = req.params.id;
+            const auditContext = this.getAuditContext(req, res);
+            let targetParentId = null;
+            if (req.body.targetParentId && req.body.targetParentId !== "null" && req.body.targetParentId !== "") {
+                targetParentId = req.body.targetParentId;
+            }
+            const folder = await this.copyFolderUseCase.execute(id, {
+                targetBrandId: req.body.targetBrandId,
+                targetParentId,
+            }, auditContext);
+            return res.status(201).json(ResponseHttp.success("Folder copied successfully", folder));
         }
         catch (error) {
             next(error);

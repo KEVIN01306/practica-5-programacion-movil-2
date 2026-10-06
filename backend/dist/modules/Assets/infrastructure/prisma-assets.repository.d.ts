@@ -12,6 +12,10 @@ export declare class PrismaAssetsRepository implements AssetsRepository {
         total: number;
     }>;
     update(id: string, data: UpdateAssetRepoInput): Promise<AssetEntity>;
+    findByNameAndFolder(name: string, brandId: string, folderId: string | null): Promise<AssetEntity | null>;
+    findByFileNameAndFolder(fileName: string, brandId: string, folderId: string | null): Promise<AssetEntity | null>;
+    findByFolderIds(folderIds: string[]): Promise<AssetEntity[]>;
     delete(id: string): Promise<void>;
+    deleteMany(ids: string[]): Promise<void>;
 }
 //# sourceMappingURL=prisma-assets.repository.d.ts.map

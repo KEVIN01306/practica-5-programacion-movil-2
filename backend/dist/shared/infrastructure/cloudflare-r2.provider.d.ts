@@ -9,6 +9,9 @@ export declare class CloudflareR2Provider implements StorageProvider {
     extractKeyFromUrl(url: string): string;
     upload(params: UploadFileParams): Promise<UploadFileResult>;
     replace(params: UploadFileParams): Promise<UploadFileResult>;
+    copy(sourceKey: string, destinationKey: string): Promise<UploadFileResult>;
+    move(sourceKey: string, destinationKey: string): Promise<UploadFileResult>;
     delete(key: string): Promise<void>;
+    deleteMany(keys: string[]): Promise<void>;
 }
 //# sourceMappingURL=cloudflare-r2.provider.d.ts.map

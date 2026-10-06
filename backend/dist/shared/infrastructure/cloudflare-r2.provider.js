@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import AppError from "../errors/AppError.js";
 export class CloudflareR2Provider {
     client;
@@ -71,6 +71,47 @@ export class CloudflareR2Provider {
     async replace(params) {
         return this.upload(params);
     }
+    async copy(sourceKey, destinationKey) {
+        const cleanSource = this.normalizeKey(sourceKey);
+        const cleanDest = this.normalizeKey(destinationKey);
+        if (cleanSource === cleanDest) {
+            return {
+                key: cleanDest,
+                url: this.getUrl(cleanDest),
+            };
+        }
+        try {
+            // S3 CopySource format is: bucket/key (with key URI encoded)
+            const copySource = `${this.bucket}/${encodeURI(cleanSource)}`;
+            const command = new CopyObjectCommand({
+                Bucket: this.bucket,
+                CopySource: copySource,
+                Key: cleanDest,
+            });
+            await this.client.send(command);
+            return {
+                key: cleanDest,
+                url: this.getUrl(cleanDest),
+            };
+        }
+        catch (error) {
+            console.error(`Cloudflare R2 copy error from ${cleanSource} to ${cleanDest}:`, error);
+            throw new AppError(`Error copying file in storage: ${error.message || error}`, "STORAGE_COPY_ERROR", 500);
+        }
+    }
+    async move(sourceKey, destinationKey) {
+        const cleanSource = this.normalizeKey(sourceKey);
+        const cleanDest = this.normalizeKey(destinationKey);
+        if (cleanSource === cleanDest) {
+            return {
+                key: cleanDest,
+                url: this.getUrl(cleanDest),
+            };
+        }
+        const copyResult = await this.copy(cleanSource, cleanDest);
+        await this.delete(cleanSource);
+        return copyResult;
+    }
     async delete(key) {
         const cleanKey = this.normalizeKey(key);
         try {
@@ -83,6 +124,33 @@ export class CloudflareR2Provider {
         catch (error) {
             console.error(`Cloudflare R2 delete error for key ${cleanKey}:`, error);
             throw new AppError(`Error deleting file from storage: ${error.message || error}`, "STORAGE_DELETE_ERROR", 500);
+        }
+    }
+    async deleteMany(keys) {
+        const cleanKeys = keys.map((k) => this.normalizeKey(k)).filter(Boolean);
+        if (cleanKeys.length === 0)
+            return;
+        try {
+            if (cleanKeys.length === 1) {
+                const singleKey = cleanKeys[0];
+                if (singleKey) {
+                    await this.delete(singleKey);
+                }
+                return;
+            }
+            const command = new DeleteObjectsCommand({
+                Bucket: this.bucket,
+                Delete: {
+                    Objects: cleanKeys.map((Key) => ({ Key })),
+                    Quiet: true,
+                },
+            });
+            await this.client.send(command);
+        }
+        catch (error) {
+            console.error("Cloudflare R2 batch delete error:", error);
+            // Fallback: delete sequentially if batch command has issues
+            await Promise.allSettled(cleanKeys.map((k) => this.delete(k)));
         }
     }
 }

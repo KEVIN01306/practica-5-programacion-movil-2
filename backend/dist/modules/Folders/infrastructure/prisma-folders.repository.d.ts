@@ -19,6 +19,8 @@ export declare class PrismaFoldersRepository implements FoldersRepository {
         parentId: string | null;
     }>>;
     isDescendant(folderId: string, potentialChildId: string): Promise<boolean>;
+    findAllChildren(parentId: string): Promise<GetFolder[]>;
+    findSubfolderIdsRecursive(folderId: string): Promise<string[]>;
     delete(id: string): Promise<void>;
 }
 //# sourceMappingURL=prisma-folders.repository.d.ts.map

@@ -13,4 +13,8 @@ export declare const UpdateFolderSchema: z.ZodObject<{
 export declare const FolderIdSchema: z.ZodObject<{
     id: z.ZodString;
 }, z.core.$strip>;
+export declare const CopyFolderSchema: z.ZodObject<{
+    targetBrandId: z.ZodString;
+    targetParentId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+}, z.core.$strip>;
 //# sourceMappingURL=folders.schemas.d.ts.map

@@ -6,13 +6,15 @@ export class AssetsController extends BaseController {
     getAssetUseCase;
     updateAssetUseCase;
     deleteAssetUseCase;
-    constructor(createAssetUseCase, listAssetsUseCase, getAssetUseCase, updateAssetUseCase, deleteAssetUseCase) {
+    copyAssetUseCase;
+    constructor(createAssetUseCase, listAssetsUseCase, getAssetUseCase, updateAssetUseCase, deleteAssetUseCase, copyAssetUseCase) {
         super();
         this.createAssetUseCase = createAssetUseCase;
         this.listAssetsUseCase = listAssetsUseCase;
         this.getAssetUseCase = getAssetUseCase;
         this.updateAssetUseCase = updateAssetUseCase;
         this.deleteAssetUseCase = deleteAssetUseCase;
+        this.copyAssetUseCase = copyAssetUseCase;
     }
     create = async (req, res, next) => {
         try {
@@ -109,6 +111,24 @@ export class AssetsController extends BaseController {
                     : null,
             }, auditContext);
             return res.status(200).json(ResponseHttp.success("Asset updated successfully", asset));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    copy = async (req, res, next) => {
+        try {
+            const id = req.params.id;
+            const auditContext = this.getAuditContext(req, res);
+            let targetFolderId = null;
+            if (req.body.targetFolderId && req.body.targetFolderId !== "null" && req.body.targetFolderId !== "") {
+                targetFolderId = req.body.targetFolderId;
+            }
+            const asset = await this.copyAssetUseCase.execute(id, {
+                targetBrandId: req.body.targetBrandId,
+                targetFolderId,
+            }, auditContext);
+            return res.status(201).json(ResponseHttp.success("Asset copied successfully", asset));
         }
         catch (error) {
             next(error);

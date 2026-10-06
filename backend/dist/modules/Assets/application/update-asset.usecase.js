@@ -1,4 +1,5 @@
 import path from "path";
+import { StoragePathHelper } from "./services/storage-path.helper.js";
 import { AssetType } from "@prisma/client";
 import AppError from "../../../shared/errors/AppError.js";
 export class UpdateAssetUseCase {
@@ -77,7 +78,11 @@ export class UpdateAssetUseCase {
         if (data.folderId !== undefined)
             repoUpdateData.folderId = data.folderId;
         let fileDetails = null;
-        // 4. Handle Physical File Replacement if a new file is uploaded
+        // 4. Handle Physical File Replacement or Relocation
+        const oldKey = this.storageProvider.extractKeyFromUrl(currentAsset.url);
+        const targetFolderId = data.folderId !== undefined ? data.folderId : currentAsset.folderId;
+        const targetBrandId = effectiveBrandId;
+        const targetFileName = currentAsset.fileName;
         if (data.file && data.file.buffer && data.file.buffer.length > 0) {
             const originalName = data.file.originalname;
             const mimeType = data.file.mimetype;
@@ -91,22 +96,35 @@ export class UpdateAssetUseCase {
                 oldMimeType: currentAsset.mimeType,
                 newMimeType: mimeType,
                 oldSizeBytes: Number(currentAsset.sizeBytes),
-                newSizeBytes: Number(data.file.size)
+                newSizeBytes: Number(data.file.size),
             };
-            // STABLE URL & KEY: Extract current key and overwrite in R2
-            const existingKey = this.storageProvider.extractKeyFromUrl(currentAsset.url);
-            await this.storageProvider.replace({
-                key: existingKey,
+            const newKey = await StoragePathHelper.resolveAndBuildKey(targetBrandId, targetFolderId, StoragePathHelper.sanitizeFileName(originalName), this.foldersRepository);
+            const uploadResult = await this.storageProvider.upload({
+                key: newKey,
                 buffer: data.file.buffer,
                 mimeType,
             });
-            // Keep the EXACT same URL, update technical metadata
-            repoUpdateData.url = currentAsset.url;
+            if (oldKey && oldKey !== newKey) {
+                await this.storageProvider.delete(oldKey).catch((e) => {
+                    console.error("Failed to delete old file key after replacement:", e);
+                });
+            }
+            repoUpdateData.url = uploadResult.url;
             repoUpdateData.fileName = originalName;
             repoUpdateData.mimeType = mimeType;
             repoUpdateData.sizeBytes = sizeBytes;
             repoUpdateData.extension = extension;
             repoUpdateData.type = type;
+        }
+        else if ((data.folderId !== undefined && data.folderId !== currentAsset.folderId) ||
+            (data.brandId !== undefined && data.brandId !== currentAsset.brandId)) {
+            // Relocation: Move physical file to new hierarchy in R2
+            const currentFileNameInKey = oldKey.split("/").pop() || targetFileName;
+            const newKey = await StoragePathHelper.resolveAndBuildKey(targetBrandId, targetFolderId, currentFileNameInKey, this.foldersRepository);
+            if (oldKey && oldKey !== newKey) {
+                const moveResult = await this.storageProvider.move(oldKey, newKey);
+                repoUpdateData.url = moveResult.url;
+            }
         }
         // 5. Update Database Record
         const updatedAsset = await this.assetsRepository.update(id, repoUpdateData);

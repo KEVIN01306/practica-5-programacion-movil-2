@@ -32,4 +32,8 @@ export declare const ListAssetsQuerySchema: z.ZodObject<{
     sku: z.ZodOptional<z.ZodString>;
     q: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
+export declare const CopyAssetBodySchema: z.ZodObject<{
+    targetBrandId: z.ZodString;
+    targetFolderId: z.ZodUnion<[z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>, z.ZodLiteral<"null">]>;
+}, z.core.$strip>;
 //# sourceMappingURL=assets.schemas.d.ts.map

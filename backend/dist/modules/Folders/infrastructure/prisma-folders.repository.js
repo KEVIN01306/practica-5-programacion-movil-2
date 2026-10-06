@@ -189,6 +189,44 @@ export class PrismaFoldersRepository {
             throw PrismaErrorMapper.map(error);
         }
     }
+    async findAllChildren(parentId) {
+        try {
+            const folders = await this.prisma.folder.findMany({
+                where: { parentId },
+                orderBy: { name: "asc" },
+                include: {
+                    brand: { select: { id: true, name: true } },
+                    parent: { select: { id: true, name: true } },
+                    _count: { select: { children: true, assets: true } }
+                }
+            });
+            return folders.map(FoldersMapper.toDomain);
+        }
+        catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
+    async findSubfolderIdsRecursive(folderId) {
+        try {
+            const allIds = [folderId];
+            const queue = [folderId];
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                const children = await this.prisma.folder.findMany({
+                    where: { parentId: currentId },
+                    select: { id: true }
+                });
+                for (const child of children) {
+                    allIds.push(child.id);
+                    queue.push(child.id);
+                }
+            }
+            return allIds;
+        }
+        catch (error) {
+            throw PrismaErrorMapper.map(error);
+        }
+    }
     async delete(id) {
         try {
             await this.prisma.folder.delete({

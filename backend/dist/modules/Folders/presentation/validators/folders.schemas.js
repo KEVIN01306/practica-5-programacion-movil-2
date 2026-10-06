@@ -13,4 +13,8 @@ export const UpdateFolderSchema = z.object({
 export const FolderIdSchema = z.object({
     id: z.string().uuid("Formato de ID de directorio inválido")
 });
+export const CopyFolderSchema = z.object({
+    targetBrandId: z.string().uuid("Formato de ID de marca destino inválido"),
+    targetParentId: z.string().uuid("Formato de ID de carpeta padre inválido").optional().nullable()
+});
 //# sourceMappingURL=folders.schemas.js.map
