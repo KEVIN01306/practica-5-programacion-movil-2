@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Box,
     Paper,
@@ -18,6 +18,7 @@ interface EmailTemplatePreviewProps {
     htmlContent: string;
     subject?: string;
     websiteName?: string;
+    websiteDomain?: string;
     height?: number | string;
 }
 
@@ -25,6 +26,7 @@ export const EmailTemplatePreview: React.FC<EmailTemplatePreviewProps> = ({
     htmlContent,
     subject = '(No subject)',
     websiteName = 'Your Website',
+    websiteDomain = 'example.com',
     height = 500,
 }) => {
     const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
@@ -38,11 +40,44 @@ export const EmailTemplatePreview: React.FC<EmailTemplatePreviewProps> = ({
         }
     };
 
+    const cleanDomain = useMemo(() => {
+        return websiteDomain
+            ? websiteDomain.replace(/^https?:\/\//, '').split('/')[0].trim()
+            : 'example.com';
+    }, [websiteDomain]);
+
+    // Live interpolation of template variables for realistic preview
+    const interpolatedHtml = useMemo(() => {
+        if (!htmlContent || !htmlContent.trim()) return '';
+
+        const previewContext: Record<string, string> = {
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            phone: '+1 (555) 234-5678',
+            company: 'Acme Corporation',
+            message: 'Hello, I would like to request more information about your platform and available services. Thank you!',
+            website_name: websiteName || 'Your Website',
+            websiteName: websiteName || 'Your Website',
+            website_domain: cleanDomain,
+            websiteDomain: cleanDomain,
+            website_logo: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(cleanDomain)}&sz=128`,
+            websiteLogo: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(cleanDomain)}&sz=128`,
+            actionUrl: `https://${cleanDomain}`,
+            year: String(new Date().getFullYear()),
+        };
+
+        let result = htmlContent;
+        for (const [key, val] of Object.entries(previewContext)) {
+            const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
+            result = result.replace(regex, val);
+        }
+        return result;
+    }, [htmlContent, websiteName, cleanDomain]);
+
     // Sanitize and format for iframe srcDoc
-    // We wrap raw html in default body styles if not already a full html document
-    const preparedHtml = htmlContent.trim()
-        ? htmlContent.includes('<html')
-            ? htmlContent
+    const preparedHtml = interpolatedHtml.trim()
+        ? interpolatedHtml.includes('<html')
+            ? interpolatedHtml
             : `<!DOCTYPE html>
 <html>
 <head>
@@ -60,7 +95,7 @@ export const EmailTemplatePreview: React.FC<EmailTemplatePreviewProps> = ({
   </style>
 </head>
 <body>
-  ${htmlContent}
+  ${interpolatedHtml}
 </body>
 </html>`
         : `<!DOCTYPE html>
@@ -118,7 +153,7 @@ export const EmailTemplatePreview: React.FC<EmailTemplatePreviewProps> = ({
                             variant="caption"
                             sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}
                         >
-                            From: {websiteName} &lt;noreply@example.com&gt;
+                            From: {websiteName} &lt;noresponder@{cleanDomain}&gt;
                         </Typography>
                     </Box>
                 </Stack>

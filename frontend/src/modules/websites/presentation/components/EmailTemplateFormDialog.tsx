@@ -49,6 +49,7 @@ interface EmailTemplateFormDialogProps {
     open: boolean;
     websiteId: string;
     websiteName: string;
+    websiteDomain?: string;
     template?: EmailTemplateDto | null;
     onClose: () => void;
     onSuccess: (template: EmailTemplateDto) => void;
@@ -60,6 +61,7 @@ export const EmailTemplateFormDialog: React.FC<EmailTemplateFormDialogProps> = (
     open,
     websiteId,
     websiteName,
+    websiteDomain,
     template,
     onClose,
     onSuccess,
@@ -412,8 +414,8 @@ export const EmailTemplateFormDialog: React.FC<EmailTemplateFormDialogProps> = (
                                     viewMode === 'split'
                                         ? '1fr 1fr'
                                         : viewMode === 'code'
-                                        ? '1fr'
-                                        : '0 1fr',
+                                            ? '1fr'
+                                            : '0 1fr',
                             },
                             gap: 2,
                         }}
@@ -475,6 +477,7 @@ export const EmailTemplateFormDialog: React.FC<EmailTemplateFormDialogProps> = (
                                     htmlContent={watchedHtmlContent || ''}
                                     subject={watchedSubject}
                                     websiteName={websiteName}
+                                    websiteDomain={websiteDomain}
                                     height="100%"
                                 />
                             </Box>

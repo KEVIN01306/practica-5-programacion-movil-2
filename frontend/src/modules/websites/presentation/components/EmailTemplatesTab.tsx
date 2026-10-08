@@ -8,17 +8,10 @@ import {
     Chip,
     IconButton,
     Tooltip,
-    CircularProgress,
     Alert,
     TextField,
     InputAdornment,
     Grid,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
 } from '@mui/material';
 import {
     Add,
@@ -34,6 +27,7 @@ import {
     Refresh,
 } from '@mui/icons-material';
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
+import ListTable, { type Column, type Action } from '../../../../shared/components/tables/ListTable';
 import EmailTemplateFormDialog from './EmailTemplateFormDialog';
 import EmailTemplatePreviewDialog from './EmailTemplatePreviewDialog';
 import { useAuthStore } from '../../../../core/store/authStore';
@@ -47,11 +41,13 @@ import type { EmailTemplateDto } from '../../domain/dto/email-templates.dto';
 interface EmailTemplatesTabProps {
     websiteId: string;
     websiteName: string;
+    websiteDomain?: string;
 }
 
 export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
     websiteId,
     websiteName,
+    websiteDomain,
 }) => {
     const user = useAuthStore((state) => state.user);
 
@@ -63,6 +59,9 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    const [page, setPage] = useState(0);
+    const [limit, setLimit] = useState(10);
 
     // Dialogs state
     const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -103,20 +102,17 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
         setFormDialogOpen(true);
     };
 
-    const handleOpenEdit = (tmpl: EmailTemplateDto, e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const handleOpenEdit = (tmpl: EmailTemplateDto) => {
         setSelectedTemplate(tmpl);
         setFormDialogOpen(true);
     };
 
-    const handleOpenPreview = (tmpl: EmailTemplateDto, e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const handleOpenPreview = (tmpl: EmailTemplateDto) => {
         setPreviewTemplate(tmpl);
         setPreviewDialogOpen(true);
     };
 
-    const handleOpenDelete = (tmpl: EmailTemplateDto, e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const handleOpenDelete = (tmpl: EmailTemplateDto) => {
         setTemplateToDelete(tmpl);
         setDeleteDialogOpen(true);
     };
@@ -154,9 +150,120 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
         );
     }, [templates, searchQuery]);
 
+    const paginatedTemplates = useMemo(() => {
+        return filteredTemplates.slice(page * limit, (page + 1) * limit);
+    }, [filteredTemplates, page, limit]);
+
     const totalFormsLinked = useMemo(() => {
         return templates.reduce((acc, curr) => acc + (curr.formsCount || 0), 0);
     }, [templates]);
+
+    const columns: Column[] = useMemo(
+        () => [
+            {
+                id: 'name',
+                name: 'Template Name',
+                format: (_val: unknown, row: EmailTemplateDto) => (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                        <Email sx={{ color: 'primary.main', fontSize: 18 }} />
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    fontWeight: 600,
+                                    fontSize: '0.8125rem',
+                                    color: 'primary.main',
+                                    cursor: 'pointer',
+                                    '&:hover': { textDecoration: 'underline' },
+                                }}
+                                onClick={() => handleOpenPreview(row)}
+                            >
+                                {row.name}
+                            </Typography>
+                        </Box>
+                    </Box>
+                ),
+            },
+            {
+                id: 'subject',
+                name: 'Email Subject',
+                format: (val: string) => (
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                            maxWidth: 320,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            fontFamily: 'monospace',
+                            fontSize: '0.75rem',
+                        }}
+                    >
+                        {val}
+                    </Typography>
+                ),
+            },
+            {
+                id: 'formsCount',
+                name: 'Associated Forms',
+                format: (val: number) => (
+                    <Chip
+                        label={`${val || 0} forms`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem', height: 22 }}
+                    />
+                ),
+            },
+            {
+                id: 'updatedAt',
+                name: 'Last Updated',
+                format: (val: string) => (
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                        {new Date(val).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                        })}
+                    </Typography>
+                ),
+            },
+        ],
+        []
+    );
+
+    const actions: Action[] = useMemo(
+        () => [
+            {
+                name: 'Preview Template',
+                icon: <Visibility sx={{ fontSize: 16 }} />,
+                color: 'primary',
+                onClick: (row: EmailTemplateDto) => handleOpenPreview(row),
+            },
+            ...(canUpdate
+                ? [
+                      {
+                          name: 'Edit Template',
+                          icon: <Edit sx={{ fontSize: 16 }} />,
+                          color: '#2563eb',
+                          onClick: (row: EmailTemplateDto) => handleOpenEdit(row),
+                      },
+                  ]
+                : []),
+            ...(canDelete
+                ? [
+                      {
+                          name: 'Delete Template',
+                          icon: <Delete sx={{ fontSize: 16 }} />,
+                          color: '#ef4444',
+                          onClick: (row: EmailTemplateDto) => handleOpenDelete(row),
+                      },
+                  ]
+                : []),
+        ],
+        [canUpdate, canDelete]
+    );
 
     return (
         <Stack spacing={2.5}>
@@ -318,7 +425,10 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
             <TextField
                 placeholder="Search templates by name, subject, or content..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(0);
+                }}
                 size="small"
                 fullWidth
                 slotProps={{
@@ -330,7 +440,7 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
                         ),
                         endAdornment: searchQuery ? (
                             <InputAdornment position="end">
-                                <IconButton size="small" onClick={() => setSearchQuery('')}>
+                                <IconButton size="small" onClick={() => { setSearchQuery(''); setPage(0); }}>
                                     <Clear fontSize="small" />
                                 </IconButton>
                             </InputAdornment>
@@ -347,187 +457,36 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
                 </Alert>
             )}
 
-            {/* Loading state */}
-            {loading ? (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        minHeight: 180,
-                    }}
-                >
-                    <CircularProgress size={32} />
-                </Box>
-            ) : filteredTemplates.length === 0 ? (
-                /* Empty state */
-                <Paper
-                    variant="outlined"
-                    sx={{
-                        p: 4,
-                        textAlign: 'center',
-                        borderRadius: 2,
-                        bgcolor: 'background.paper',
-                        borderColor: 'divider',
-                    }}
-                >
-                    <Email sx={{ fontSize: 38, color: 'text.disabled', mb: 1 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {searchQuery ? 'No matching templates found' : 'No email templates yet'}
-                    </Typography>
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ maxWidth: 440, mx: 'auto', mb: 2.5, fontSize: '0.8125rem' }}
-                    >
-                        {searchQuery
-                            ? `No email templates match "${searchQuery}". Try modifying your search query.`
-                            : 'Create reusable email templates to send formatted notifications, welcome messages, and receipts.'}
-                    </Typography>
-                    {canCreate && !searchQuery && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            startIcon={<Add fontSize="small" />}
-                            onClick={handleOpenCreate}
-                            sx={{
-                                textTransform: 'none',
-                                borderRadius: 1.5,
-                                fontWeight: 600,
-                                fontSize: '0.8125rem',
-                            }}
-                        >
-                            Create First Template
-                        </Button>
-                    )}
-                </Paper>
-            ) : (
-                /* Templates Table */
-                <TableContainer
-                    component={Paper}
-                    variant="outlined"
-                    sx={{ borderRadius: 2, borderColor: 'divider', overflow: 'hidden' }}
-                >
-                    <Table size="small">
-                        <TableHead sx={{ bgcolor: 'action.hover' }}>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>
-                                    NAME
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>
-                                    SUBJECT
-                                </TableCell>
-                                <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}
-                                >
-                                    FORMS
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>
-                                    UPDATED
-                                </TableCell>
-                                <TableCell
-                                    align="right"
-                                    sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5, pr: 2 }}
-                                >
-                                    ACTIONS
-                                </TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredTemplates.map((tmpl) => (
-                                <TableRow
-                                    key={tmpl.id}
-                                    hover
-                                    sx={{
-                                        '&:last-child td, &:last-child th': { border: 0 },
-                                        cursor: 'pointer',
-                                    }}
-                                    onClick={() => handleOpenPreview(tmpl)}
-                                >
-                                    <TableCell sx={{ py: 1.5 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                            {tmpl.name}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell sx={{ py: 1.5 }}>
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{
-                                                maxWidth: 320,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                fontFamily: 'monospace',
-                                                fontSize: '0.75rem',
-                                            }}
-                                        >
-                                            {tmpl.subject}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="center" sx={{ py: 1.5 }}>
-                                        <Chip
-                                            label={`${tmpl.formsCount || 0} forms`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ fontSize: '0.7rem', height: 22 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ py: 1.5 }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {new Date(tmpl.updatedAt).toLocaleDateString(undefined, {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                            })}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ py: 1.5, pr: 2 }} onClick={(e) => e.stopPropagation()}>
-                                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-                                            <Tooltip title="Preview HTML Template">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(e) => handleOpenPreview(tmpl, e)}
-                                                >
-                                                    <Visibility fontSize="small" sx={{ fontSize: 18 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            {canUpdate && (
-                                                <Tooltip title="Edit Template">
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e) => handleOpenEdit(tmpl, e)}
-                                                    >
-                                                        <Edit fontSize="small" sx={{ fontSize: 18 }} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
-                                            {canDelete && (
-                                                <Tooltip title="Delete Template">
-                                                    <IconButton
-                                                        size="small"
-                                                        color="error"
-                                                        onClick={(e) => handleOpenDelete(tmpl, e)}
-                                                    >
-                                                        <Delete fontSize="small" sx={{ fontSize: 18 }} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
-                                        </Stack>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            )}
+            {/* ListTable Component */}
+            <ListTable
+                columns={columns}
+                data={paginatedTemplates}
+                actions={actions}
+                pagination={{
+                    total: filteredTemplates.length,
+                    limit,
+                    offset: page * limit,
+                    onPageChange: (newPage: number) => setPage(newPage),
+                    onRowsPerPageChange: (newLimit: number) => {
+                        setLimit(newLimit);
+                        setPage(0);
+                    },
+                }}
+                emptyMessage={
+                    loading
+                        ? 'Loading email templates...'
+                        : searchQuery
+                        ? `No email templates match "${searchQuery}".`
+                        : 'No email templates yet. Create your first template to send formatted notifications.'
+                }
+            />
 
             {/* Create / Edit Form Dialog */}
             <EmailTemplateFormDialog
                 open={formDialogOpen}
                 websiteId={websiteId}
                 websiteName={websiteName}
+                websiteDomain={websiteDomain}
                 template={selectedTemplate}
                 onClose={() => setFormDialogOpen(false)}
                 onSuccess={(saved) => {
@@ -546,6 +505,7 @@ export const EmailTemplatesTab: React.FC<EmailTemplatesTabProps> = ({
                 open={previewDialogOpen}
                 template={previewTemplate}
                 websiteName={websiteName}
+                websiteDomain={websiteDomain}
                 onClose={() => {
                     setPreviewDialogOpen(false);
                     setPreviewTemplate(null);

@@ -180,6 +180,9 @@ const { data: items } = await res.json();
                         <Tabs
                             value={activeTab}
                             onChange={(_, val) => setActiveTab(val)}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            allowScrollButtonsMobile
                             sx={{
                                 minHeight: 36,
                                 '& .MuiTab-root': {
@@ -189,6 +192,7 @@ const { data: items } = await res.json();
                                     minHeight: 36,
                                     py: 0.5,
                                     px: 2,
+                                    whiteSpace: 'nowrap',
                                 },
                             }}
                         >

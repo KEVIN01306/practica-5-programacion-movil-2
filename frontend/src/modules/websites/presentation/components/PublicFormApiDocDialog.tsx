@@ -189,7 +189,10 @@ console.log(result);`;
                             <Tabs
                                 value={activeTab}
                                 onChange={(_, val) => setActiveTab(val)}
-                                sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, textTransform: 'none', fontSize: '0.8125rem' } }}
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                allowScrollButtonsMobile
+                                sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, textTransform: 'none', fontSize: '0.8125rem', whiteSpace: 'nowrap' } }}
                             >
                                 <Tab label="cURL Command" icon={<Http sx={{ fontSize: 16 }} />} iconPosition="start" />
                                 <Tab label="JavaScript / Fetch" icon={<Code sx={{ fontSize: 16 }} />} iconPosition="start" />

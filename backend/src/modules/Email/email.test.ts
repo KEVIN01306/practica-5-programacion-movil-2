@@ -247,8 +247,8 @@ async function runTests() {
     );
     assert(
         Array.isArray(mockProvider.sentEmails[0].to) &&
-            mockProvider.sentEmails[0].to.includes('sales@example.com') &&
-            mockProvider.sentEmails[0].to.includes('leads@example.com'),
+        mockProvider.sentEmails[0].to.includes('sales@example.com') &&
+        mockProvider.sentEmails[0].to.includes('leads@example.com'),
         'Email sent to all configured recipientEmails'
     );
 

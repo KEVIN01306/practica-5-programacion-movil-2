@@ -16,12 +16,6 @@ import {
     InputAdornment,
     Tabs,
     Tab,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     MenuItem,
     Grid,
 } from '@mui/material';
@@ -50,6 +44,7 @@ import {
     ErrorOutlined,
 } from '@mui/icons-material';
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
+import ListTable, { type Column, type Action } from '../../../../shared/components/tables/ListTable';
 import FormFormDialog from '../components/FormFormDialog';
 import FormFieldFormDialog from '../components/FormFieldFormDialog';
 import FormSubmissionDetailDialog from '../components/FormSubmissionDetailDialog';
@@ -109,6 +104,8 @@ export const FormDetailPage: React.FC = () => {
     // Filters for submissions
     const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>('ALL');
     const [submissionSearch, setSubmissionSearch] = useState('');
+    const [submissionPage, setSubmissionPage] = useState(0);
+    const [submissionLimit, setSubmissionLimit] = useState(10);
 
     // Dialogs state
     const [editFormOpen, setEditFormOpen] = useState(false);
@@ -305,6 +302,272 @@ export const FormDetailPage: React.FC = () => {
         return result;
     }, [submissions, submissionStatusFilter, submissionSearch]);
 
+    const paginatedSubmissions = useMemo(() => {
+        return filteredSubmissions.slice(
+            submissionPage * submissionLimit,
+            (submissionPage + 1) * submissionLimit
+        );
+    }, [filteredSubmissions, submissionPage, submissionLimit]);
+
+    // ==========================================
+    // ListTable Column & Action Definitions
+    // ==========================================
+    const fieldColumns: Column[] = useMemo(
+        () => [
+            {
+                id: 'label',
+                name: 'Label',
+                format: (_val: unknown, row: FormFieldDto) => (
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            fontWeight: 600,
+                            fontSize: '0.8125rem',
+                            color: canUpdateField ? 'primary.main' : 'text.primary',
+                            cursor: canUpdateField ? 'pointer' : 'default',
+                            '&:hover': canUpdateField ? { textDecoration: 'underline' } : undefined,
+                        }}
+                        onClick={() => {
+                            if (canUpdateField) {
+                                setSelectedField(row);
+                                setFieldFormOpen(true);
+                            }
+                        }}
+                    >
+                        {row.label}
+                    </Typography>
+                ),
+            },
+            {
+                id: 'key',
+                name: 'Property Key',
+                format: (val: string) => (
+                    <Chip
+                        label={val}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontFamily: 'monospace', fontSize: '0.75rem', height: 22 }}
+                    />
+                ),
+            },
+            {
+                id: 'type',
+                name: 'Data Type',
+                format: (val: string) => (
+                    <Chip
+                        label={val}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600 }}
+                    />
+                ),
+            },
+            {
+                id: 'isRequired',
+                name: 'Required',
+                format: (val: boolean) =>
+                    val ? (
+                        <Chip
+                            label="Required"
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600 }}
+                        />
+                    ) : (
+                        <Typography variant="caption" color="text.secondary">
+                            Optional
+                        </Typography>
+                    ),
+            },
+        ],
+        [canUpdateField]
+    );
+
+    const fieldActions: Action[] = useMemo(
+        () => [
+            ...(canUpdateField
+                ? [
+                    {
+                        name: 'Edit Field',
+                        icon: <Edit sx={{ fontSize: 16 }} />,
+                        color: '#2563eb',
+                        onClick: (fld: FormFieldDto) => {
+                            setSelectedField(fld);
+                            setFieldFormOpen(true);
+                        },
+                    },
+                ]
+                : []),
+            ...(canDeleteField
+                ? [
+                    {
+                        name: 'Delete Field',
+                        icon: <Delete sx={{ fontSize: 16 }} />,
+                        color: '#ef4444',
+                        onClick: (fld: FormFieldDto) => {
+                            setFieldToDelete(fld);
+                            setDeleteFieldOpen(true);
+                        },
+                    },
+                ]
+                : []),
+        ],
+        [canUpdateField, canDeleteField]
+    );
+
+    const submissionColumns: Column[] = useMemo(
+        () => [
+            {
+                id: 'status',
+                name: 'Status',
+                format: (val: SubmissionStatusDto) => {
+                    const icon = STATUS_ICONS[val] || <Schedule sx={{ fontSize: 13 }} />;
+                    const statusColor =
+                        val === 'PROCESSED'
+                            ? 'success'
+                            : val === 'SPAM'
+                                ? 'error'
+                                : val === 'PENDING'
+                                    ? 'warning'
+                                    : 'default';
+                    return (
+                        <Chip
+                            icon={icon}
+                            label={val}
+                            size="small"
+                            color={statusColor}
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }}
+                        />
+                    );
+                },
+            },
+            {
+                id: 'contact',
+                name: 'Contact',
+                format: (_val: unknown, row: FormSubmissionDto) => {
+                    if (!row.contact) {
+                        return (
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: 'primary.main',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    '&:hover': { textDecoration: 'underline' },
+                                }}
+                                onClick={() => {
+                                    setSelectedSubmission(row);
+                                    setSubmissionDetailOpen(true);
+                                }}
+                            >
+                                Anonymous
+                            </Typography>
+                        );
+                    }
+                    const name =
+                        [row.contact.firstName, row.contact.lastName].filter(Boolean).join(' ') ||
+                        row.contact.email;
+                    return (
+                        <Box
+                            sx={{ cursor: 'pointer' }}
+                            onClick={() => {
+                                setSelectedSubmission(row);
+                                setSubmissionDetailOpen(true);
+                            }}
+                        >
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    fontWeight: 600,
+                                    fontSize: '0.8125rem',
+                                    color: 'primary.main',
+                                    '&:hover': { textDecoration: 'underline' },
+                                }}
+                            >
+                                {name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                {row.contact.email}
+                            </Typography>
+                        </Box>
+                    );
+                },
+            },
+            {
+                id: 'data',
+                name: 'Submission Data Preview',
+                format: (_val: unknown, row: FormSubmissionDto) => {
+                    const previewText = Object.entries(row.data || {})
+                        .slice(0, 3)
+                        .map(([k, v]) => `${k}: ${String(v)}`)
+                        .join(' • ');
+                    return (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                                maxWidth: 340,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                fontFamily: 'monospace',
+                                fontSize: '0.75rem',
+                            }}
+                        >
+                            {previewText || '(empty)'}
+                        </Typography>
+                    );
+                },
+            },
+            {
+                id: 'createdAt',
+                name: 'Date',
+                format: (val: string) => (
+                    <Typography variant="caption" color="text.secondary">
+                        {new Date(val).toLocaleString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        })}
+                    </Typography>
+                ),
+            },
+        ],
+        []
+    );
+
+    const submissionActions: Action[] = useMemo(
+        () => [
+            {
+                name: 'View Submission Payload',
+                icon: <Visibility sx={{ fontSize: 16 }} />,
+                color: 'primary',
+                onClick: (sub: FormSubmissionDto) => {
+                    setSelectedSubmission(sub);
+                    setSubmissionDetailOpen(true);
+                },
+            },
+            ...(canDeleteSubmission
+                ? [
+                    {
+                        name: 'Delete Submission',
+                        icon: <Delete sx={{ fontSize: 16 }} />,
+                        color: '#ef4444',
+                        onClick: (sub: FormSubmissionDto) => {
+                            setSubmissionToDelete(sub);
+                            setDeleteSubmissionOpen(true);
+                        },
+                    },
+                ]
+                : []),
+        ],
+        [canDeleteSubmission]
+    );
+
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
@@ -425,9 +688,11 @@ export const FormDetailPage: React.FC = () => {
                 <Tabs
                     value={activeTab}
                     onChange={handleTabChange}
-                    variant="standard"
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
                     sx={{
-                        px: 2,
+                        px: { xs: 0.5, sm: 2 },
                         borderBottom: 1,
                         borderColor: 'divider',
                         minHeight: 42,
@@ -437,6 +702,7 @@ export const FormDetailPage: React.FC = () => {
                             minHeight: 42,
                             py: 1,
                             fontSize: '0.8125rem',
+                            whiteSpace: 'nowrap',
                         },
                     }}
                 >
@@ -628,120 +894,13 @@ export const FormDetailPage: React.FC = () => {
                         </Stack>
                     </Box>
 
-                    {fields.length === 0 ? (
-                        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-                            <ViewStream sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                No fields configured yet
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420, mx: 'auto', mb: 2, fontSize: '0.8125rem' }}>
-                                Add fields such as Name, Email, and Message to define what properties this form accepts.
-                            </Typography>
-                            <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
-                                <Button
-                                    size="small"
-                                    variant="outlined"
-                                    startIcon={<AutoAwesome fontSize="small" />}
-                                    onClick={handleLoadPresetFields}
-                                    sx={{ textTransform: 'none', borderRadius: 1.5 }}
-                                >
-                                    Load Contact Preset
-                                </Button>
-                                <Button
-                                    size="small"
-                                    variant="contained"
-                                    startIcon={<Add fontSize="small" />}
-                                    onClick={() => {
-                                        setSelectedField(null);
-                                        setFieldFormOpen(true);
-                                    }}
-                                    sx={{ textTransform: 'none', borderRadius: 1.5 }}
-                                >
-                                    Add Custom Field
-                                </Button>
-                            </Stack>
-                        </Paper>
-                    ) : (
-                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: 'divider' }}>
-                            <Table size="small">
-                                <TableHead sx={{ bgcolor: 'action.hover' }}>
-                                    <TableRow>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>LABEL</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>PROPERTY KEY</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>DATA TYPE</TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>REQUIRED</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5, pr: 2 }}>ACTIONS</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {fields.map((fld) => (
-                                        <TableRow key={fld.id} hover>
-                                            <TableCell sx={{ py: 1.5 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                    {fld.label}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell sx={{ py: 1.5 }}>
-                                                <Chip
-                                                    label={fld.key}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{ fontFamily: 'monospace', fontSize: '0.75rem', height: 22 }}
-                                                />
-                                            </TableCell>
-                                            <TableCell sx={{ py: 1.5 }}>
-                                                <Chip
-                                                    label={fld.type}
-                                                    size="small"
-                                                    color="primary"
-                                                    variant="outlined"
-                                                    sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600 }}
-                                                />
-                                            </TableCell>
-                                            <TableCell align="center" sx={{ py: 1.5 }}>
-                                                {fld.isRequired ? (
-                                                    <Chip label="Required" size="small" color="error" variant="outlined" sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600 }} />
-                                                ) : (
-                                                    <Typography variant="caption" color="text.secondary">Optional</Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ py: 1.5, pr: 2 }}>
-                                                <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-                                                    {canUpdateField && (
-                                                        <Tooltip title="Edit Field">
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => {
-                                                                    setSelectedField(fld);
-                                                                    setFieldFormOpen(true);
-                                                                }}
-                                                            >
-                                                                <Edit fontSize="small" sx={{ fontSize: 18 }} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    )}
-                                                    {canDeleteField && (
-                                                        <Tooltip title="Delete Field">
-                                                            <IconButton
-                                                                size="small"
-                                                                color="error"
-                                                                onClick={() => {
-                                                                    setFieldToDelete(fld);
-                                                                    setDeleteFieldOpen(true);
-                                                                }}
-                                                            >
-                                                                <Delete fontSize="small" sx={{ fontSize: 18 }} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    )}
-                                                </Stack>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    )}
+                    {/* Form Fields ListTable */}
+                    <ListTable
+                        columns={fieldColumns}
+                        data={fields}
+                        actions={fieldActions}
+                        emptyMessage="No fields configured yet. Add fields such as Name, Email, and Message to define what properties this form accepts."
+                    />
                 </Stack>
             )}
 
@@ -756,7 +915,10 @@ export const FormDetailPage: React.FC = () => {
                             <TextField
                                 placeholder="Search submissions by contact, email, or data content..."
                                 value={submissionSearch}
-                                onChange={(e) => setSubmissionSearch(e.target.value)}
+                                onChange={(e) => {
+                                    setSubmissionSearch(e.target.value);
+                                    setSubmissionPage(0);
+                                }}
                                 size="small"
                                 fullWidth
                                 slotProps={{
@@ -768,7 +930,7 @@ export const FormDetailPage: React.FC = () => {
                                         ),
                                         endAdornment: submissionSearch ? (
                                             <InputAdornment position="end">
-                                                <IconButton size="small" onClick={() => setSubmissionSearch('')}>
+                                                <IconButton size="small" onClick={() => { setSubmissionSearch(''); setSubmissionPage(0); }}>
                                                     <Clear fontSize="small" />
                                                 </IconButton>
                                             </InputAdornment>
@@ -782,7 +944,10 @@ export const FormDetailPage: React.FC = () => {
                                 select
                                 size="small"
                                 value={submissionStatusFilter}
-                                onChange={(e) => setSubmissionStatusFilter(e.target.value)}
+                                onChange={(e) => {
+                                    setSubmissionStatusFilter(e.target.value);
+                                    setSubmissionPage(0);
+                                }}
                                 sx={{ minWidth: 140 }}
                                 slotProps={{ input: { sx: { fontSize: '0.8125rem', bgcolor: 'background.paper' } } }}
                             >
@@ -810,147 +975,27 @@ export const FormDetailPage: React.FC = () => {
                         </Tooltip>
                     </Box>
 
-                    {filteredSubmissions.length === 0 ? (
-                        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-                            <Inbox sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                {submissionSearch || submissionStatusFilter !== 'ALL'
-                                    ? 'No matching submissions found'
-                                    : 'No submissions received yet'}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 440, mx: 'auto', fontSize: '0.8125rem' }}>
-                                When external users submit data through the public endpoint, their entries will appear here.
-                            </Typography>
-                        </Paper>
-                    ) : (
-                        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: 'divider' }}>
-                            <Table size="small">
-                                <TableHead sx={{ bgcolor: 'action.hover' }}>
-                                    <TableRow>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>STATUS</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>CONTACT</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>SUBMISSION DATA PREVIEW</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>DATE</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5, pr: 2 }}>ACTIONS</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredSubmissions.map((sub) => {
-                                        const statusObj = sub.status;
-                                        const icon = STATUS_ICONS[statusObj] || <Schedule sx={{ fontSize: 13 }} />;
-                                        const statusColor =
-                                            statusObj === 'PROCESSED'
-                                                ? 'success'
-                                                : statusObj === 'SPAM'
-                                                ? 'error'
-                                                : statusObj === 'PENDING'
-                                                ? 'warning'
-                                                : 'default';
-
-                                        // Short summary preview of keys
-                                        const previewText = Object.entries(sub.data || {})
-                                            .slice(0, 3)
-                                            .map(([k, v]) => `${k}: ${String(v)}`)
-                                            .join(' • ');
-
-                                        return (
-                                            <TableRow
-                                                key={sub.id}
-                                                hover
-                                                sx={{ cursor: 'pointer' }}
-                                                onClick={() => {
-                                                    setSelectedSubmission(sub);
-                                                    setSubmissionDetailOpen(true);
-                                                }}
-                                            >
-                                                <TableCell sx={{ py: 1.5 }}>
-                                                    <Chip
-                                                        icon={icon}
-                                                        label={sub.status}
-                                                        size="small"
-                                                        color={statusColor}
-                                                        variant="outlined"
-                                                        sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell sx={{ py: 1.5 }}>
-                                                    {sub.contact ? (
-                                                        <Box>
-                                                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8125rem' }}>
-                                                                {[sub.contact.firstName, sub.contact.lastName].filter(Boolean).join(' ') || sub.contact.email}
-                                                            </Typography>
-                                                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                                                {sub.contact.email}
-                                                            </Typography>
-                                                        </Box>
-                                                    ) : (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Anonymous
-                                                        </Typography>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell sx={{ py: 1.5 }}>
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                        sx={{
-                                                            maxWidth: 340,
-                                                            whiteSpace: 'nowrap',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            fontFamily: 'monospace',
-                                                            fontSize: '0.75rem',
-                                                        }}
-                                                    >
-                                                        {previewText || '(empty)'}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell sx={{ py: 1.5 }}>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {new Date(sub.createdAt).toLocaleString(undefined, {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                        })}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell align="right" sx={{ py: 1.5, pr: 2 }} onClick={(e) => e.stopPropagation()}>
-                                                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-                                                        <Tooltip title="View Submission Payload">
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => {
-                                                                    setSelectedSubmission(sub);
-                                                                    setSubmissionDetailOpen(true);
-                                                                }}
-                                                            >
-                                                                <Visibility fontSize="small" sx={{ fontSize: 18 }} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        {canDeleteSubmission && (
-                                                            <Tooltip title="Delete Submission">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => {
-                                                                        setSubmissionToDelete(sub);
-                                                                        setDeleteSubmissionOpen(true);
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" sx={{ fontSize: 18 }} />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        )}
-                                                    </Stack>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    )}
+                    {/* Submissions ListTable */}
+                    <ListTable
+                        columns={submissionColumns}
+                        data={paginatedSubmissions}
+                        actions={submissionActions}
+                        pagination={{
+                            total: filteredSubmissions.length,
+                            limit: submissionLimit,
+                            offset: submissionPage * submissionLimit,
+                            onPageChange: (newPage: number) => setSubmissionPage(newPage),
+                            onRowsPerPageChange: (newLimit: number) => {
+                                setSubmissionLimit(newLimit);
+                                setSubmissionPage(0);
+                            },
+                        }}
+                        emptyMessage={
+                            submissionSearch || submissionStatusFilter !== 'ALL'
+                                ? 'No matching submissions found.'
+                                : 'No submissions received yet. When external users submit data through the public endpoint, their entries will appear here.'
+                        }
+                    />
                 </Stack>
             )}
 

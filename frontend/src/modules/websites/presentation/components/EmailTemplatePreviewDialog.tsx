@@ -17,6 +17,7 @@ interface EmailTemplatePreviewDialogProps {
     open: boolean;
     template: EmailTemplateDto | null;
     websiteName: string;
+    websiteDomain?: string;
     onClose: () => void;
     onEdit?: (template: EmailTemplateDto) => void;
 }
@@ -25,6 +26,7 @@ export const EmailTemplatePreviewDialog: React.FC<EmailTemplatePreviewDialogProp
     open,
     template,
     websiteName,
+    websiteDomain,
     onClose,
     onEdit,
 }) => {
@@ -79,6 +81,7 @@ export const EmailTemplatePreviewDialog: React.FC<EmailTemplatePreviewDialogProp
                     htmlContent={template.htmlContent}
                     subject={template.subject}
                     websiteName={websiteName}
+                    websiteDomain={websiteDomain}
                     height="100%"
                 />
             </DialogContent>

@@ -299,16 +299,20 @@ export const RolesManagementPage: React.FC = () => {
                 <Tabs
                     value={tabIndex}
                     onChange={(_, val) => setTabIndex(val)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
                     textColor="primary"
                     indicatorColor="primary"
                     sx={{
-                        px: 2,
+                        px: { xs: 0.5, sm: 2 },
                         '& .MuiTab-root': {
                             textTransform: 'none',
                             fontWeight: 600,
                             fontSize: '14px',
                             minHeight: 48,
                             gap: 1,
+                            whiteSpace: 'nowrap',
                         },
                     }}
                 >

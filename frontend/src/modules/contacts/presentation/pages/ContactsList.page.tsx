@@ -188,10 +188,13 @@ export const ContactsListPage: React.FC = () => {
                                     sx={{
                                         fontWeight: 600,
                                         fontSize: '0.8125rem',
-                                        color: 'text.primary',
+                                        color: 'primary.main',
                                         lineHeight: 1.2,
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' },
                                     }}
                                     noWrap
+                                    onClick={() => navigate(`/contacts/${row.id}`)}
                                 >
                                     {name || 'Unnamed Contact'}
                                 </Typography>

@@ -603,17 +603,21 @@ export const ContentTypeDetailPage: React.FC = () => {
                     <Tabs
                         value={activeTab}
                         onChange={(_, val) => setActiveTab(val)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        allowScrollButtonsMobile
                         sx={{
                             borderBottom: 1,
                             borderColor: 'divider',
                             minHeight: 42,
-                            px: 2,
+                            px: { xs: 0.5, sm: 2 },
                             '& .MuiTab-root': {
                                 textTransform: 'none',
                                 fontWeight: 600,
                                 minHeight: 42,
                                 py: 1,
                                 fontSize: '0.8125rem',
+                                whiteSpace: 'nowrap',
                             },
                         }}
                     >

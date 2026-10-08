@@ -5,6 +5,7 @@ import type { ContactsRepository } from "../domain/contacts.repository.js";
 import type { FormFieldEntity } from "../domain/form-field.entity.js";
 import type { FormSubmissionEntity } from "../domain/form-submission.entity.js";
 import type { EmailTemplatesRepository } from "../../EmailTemplates/domain/email-templates.repository.js";
+import type { WebsitesRepository } from "../../Websites/domain/websites.repository.js";
 import type { IEmailProvider } from "../../Email/domain/email.provider.js";
 import { TemplateRenderer } from "../../Email/domain/template-renderer.js";
 import AppError from "../../../shared/errors/AppError.js";
@@ -23,7 +24,8 @@ export class SubmitPublicFormUseCase {
         private readonly formSubmissionsRepository: FormSubmissionsRepository,
         private readonly contactsRepository: ContactsRepository,
         private readonly emailTemplatesRepository?: EmailTemplatesRepository,
-        private readonly emailProvider?: IEmailProvider
+        private readonly emailProvider?: IEmailProvider,
+        private readonly websitesRepository?: WebsitesRepository
     ) { }
 
     async execute(input: SubmitPublicFormInput): Promise<FormSubmissionEntity> {
@@ -162,13 +164,58 @@ export class SubmitPublicFormUseCase {
                 return;
             }
 
+            // Resolve website details for template variables and sender name formatting
+            const website = this.websitesRepository
+                ? await this.websitesRepository.findById(form.websiteId)
+                : null;
+
+            const cleanDomain = website?.domain
+                ? website.domain.replace(/^https?:\/\//, '').split('/')[0]?.trim() || ''
+                : '';
+            const logoUrl = cleanDomain
+                ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(cleanDomain)}&sz=128`
+                : '';
+
+            const templateContext: Record<string, any> = {
+                ...data,
+                websiteName: website?.name || '',
+                website_name: website?.name || '',
+                websiteDomain: cleanDomain,
+                website_domain: cleanDomain,
+                websiteLogo: logoUrl,
+                website_logo: logoUrl,
+                formName: form.name,
+                form_name: form.name,
+                year: new Date().getFullYear(),
+            };
+
             // Safe dynamic template interpolation
-            const subject = TemplateRenderer.render(template.subject, data) || `New Form Submission: ${form.name}`;
-            const html = TemplateRenderer.render(template.htmlContent, data);
+            const subject = TemplateRenderer.render(template.subject, templateContext) || `New Form Submission: ${form.name}`;
+            const html = TemplateRenderer.render(template.htmlContent, templateContext);
+
+            let formattedFrom: string | undefined = undefined;
+            const senderName = website?.name ? website.name.replace(/[<>"\\]/g, '').trim() : '';
+
+            let originEmail = '';
+            if (form.emailFrom && form.emailFrom.trim()) {
+                const rawFrom = form.emailFrom.trim();
+                const match = rawFrom.match(/<([^>]+)>/);
+                originEmail = match ? match[1].trim() : rawFrom;
+            } else if (cleanDomain) {
+                originEmail = `noresponder@${cleanDomain}`;
+            }
+
+            if (senderName && originEmail) {
+                formattedFrom = `${senderName} <${originEmail}>`;
+            } else if (originEmail) {
+                formattedFrom = originEmail;
+            } else if (senderName) {
+                formattedFrom = senderName;
+            }
 
             // Dispatch via decoupled IEmailProvider
             const result = await this.emailProvider!.sendEmail({
-                from: form.emailFrom || undefined,
+                from: formattedFrom,
                 to: recipients,
                 subject,
                 html,

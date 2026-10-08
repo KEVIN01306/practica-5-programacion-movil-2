@@ -9,17 +9,10 @@ import {
     Chip,
     IconButton,
     Tooltip,
-    CircularProgress,
     Alert,
     TextField,
     InputAdornment,
     Grid,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
 } from '@mui/material';
 import {
     Add,
@@ -36,6 +29,7 @@ import {
     ArrowForward,
 } from '@mui/icons-material';
 import ConfirmDialog from '../../../../shared/components/dialog/ConfirmDialog';
+import ListTable, { type Column, type Action } from '../../../../shared/components/tables/ListTable';
 import FormFormDialog from './FormFormDialog';
 import { useAuthStore } from '../../../../core/store/authStore';
 import { hasPermission } from '../../../../core/utils/permissions';
@@ -63,6 +57,9 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    const [page, setPage] = useState(0);
+    const [limit, setLimit] = useState(10);
 
     // Dialogs state
     const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -100,14 +97,12 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
         setFormDialogOpen(true);
     };
 
-    const handleOpenEdit = (f: FormDto, e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const handleOpenEdit = (f: FormDto) => {
         setSelectedForm(f);
         setFormDialogOpen(true);
     };
 
-    const handleOpenDelete = (f: FormDto, e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const handleOpenDelete = (f: FormDto) => {
         setFormToDelete(f);
         setDeleteDialogOpen(true);
     };
@@ -144,6 +139,10 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
         );
     }, [forms, searchQuery]);
 
+    const paginatedForms = useMemo(() => {
+        return filteredForms.slice(page * limit, (page + 1) * limit);
+    }, [filteredForms, page, limit]);
+
     const totalFields = useMemo(() => {
         return forms.reduce((acc, curr) => acc + (curr.fieldsCount || 0), 0);
     }, [forms]);
@@ -151,6 +150,152 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
     const totalSubmissions = useMemo(() => {
         return forms.reduce((acc, curr) => acc + (curr.submissionsCount || 0), 0);
     }, [forms]);
+
+    const columns: Column[] = useMemo(
+        () => [
+            {
+                id: 'name',
+                name: 'Form Name',
+                format: (_val: unknown, row: FormDto) => (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                        <DynamicForm sx={{ color: 'primary.main', fontSize: 18 }} />
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    fontWeight: 600,
+                                    fontSize: '0.8125rem',
+                                    color: 'primary.main',
+                                    cursor: 'pointer',
+                                    '&:hover': { textDecoration: 'underline' },
+                                }}
+                                onClick={() => navigate(`/websites/${websiteId}/forms/${row.id}`)}
+                            >
+                                {row.name}
+                            </Typography>
+                        </Box>
+                    </Box>
+                ),
+            },
+            {
+                id: 'slug',
+                name: 'Endpoint Slug',
+                format: (val: string) => (
+                    <Chip
+                        label={`/forms/${val}/submit`}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                            fontFamily: 'monospace',
+                            fontSize: '0.75rem',
+                            height: 22,
+                            bgcolor: 'action.hover',
+                        }}
+                    />
+                ),
+            },
+            {
+                id: 'sendEmail',
+                name: 'Notifications',
+                format: (_val: unknown, row: FormDto) =>
+                    row.sendEmail ? (
+                        <Tooltip
+                            title={`Recipients: ${(row.recipientEmails || []).join(', ') || 'None'}${
+                                row.emailTemplate ? ` • Template: ${row.emailTemplate.name}` : ''
+                            }`}
+                        >
+                            <Chip
+                                icon={<MarkEmailRead sx={{ fontSize: '13px !important' }} />}
+                                label="Email Enabled"
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }}
+                            />
+                        </Tooltip>
+                    ) : (
+                        <Chip
+                            icon={<NotificationsOff sx={{ fontSize: '13px !important' }} />}
+                            label="Disabled"
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 22, color: 'text.secondary' }}
+                        />
+                    ),
+            },
+            {
+                id: 'fieldsCount',
+                name: 'Fields',
+                format: (val: number) => (
+                    <Chip
+                        label={`${val || 0} fields`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem', height: 22 }}
+                    />
+                ),
+            },
+            {
+                id: 'submissionsCount',
+                name: 'Submissions',
+                format: (val: number) => (
+                    <Chip
+                        label={`${val || 0} entries`}
+                        size="small"
+                        color={val ? 'primary' : 'default'}
+                        variant={val ? 'filled' : 'outlined'}
+                        sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }}
+                    />
+                ),
+            },
+            {
+                id: 'updatedAt',
+                name: 'Updated',
+                format: (val: string) => (
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                        {new Date(val).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                        })}
+                    </Typography>
+                ),
+            },
+        ],
+        []
+    );
+
+    const actions: Action[] = useMemo(
+        () => [
+            {
+                name: 'Manage Form & Fields',
+                icon: <ArrowForward sx={{ fontSize: 16 }} />,
+                color: 'primary',
+                onClick: (row: FormDto) => navigate(`/websites/${websiteId}/forms/${row.id}`),
+            },
+            ...(canUpdate
+                ? [
+                      {
+                          name: 'Edit Settings',
+                          icon: <Edit sx={{ fontSize: 16 }} />,
+                          color: '#2563eb',
+                          onClick: (row: FormDto) => handleOpenEdit(row),
+                      },
+                  ]
+                : []),
+            ...(canDelete
+                ? [
+                      {
+                          name: 'Delete Form',
+                          icon: <Delete sx={{ fontSize: 16 }} />,
+                          color: '#ef4444',
+                          onClick: (row: FormDto) => handleOpenDelete(row),
+                      },
+                  ]
+                : []),
+        ],
+        [canUpdate, canDelete, navigate, websiteId]
+    );
 
     return (
         <Stack spacing={2.5}>
@@ -309,7 +454,10 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
             <TextField
                 placeholder="Search forms by name or endpoint slug..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(0);
+                }}
                 size="small"
                 fullWidth
                 slotProps={{
@@ -321,7 +469,7 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
                         ),
                         endAdornment: searchQuery ? (
                             <InputAdornment position="end">
-                                <IconButton size="small" onClick={() => setSearchQuery('')}>
+                                <IconButton size="small" onClick={() => { setSearchQuery(''); setPage(0); }}>
                                     <Clear fontSize="small" />
                                 </IconButton>
                             </InputAdornment>
@@ -338,226 +486,29 @@ export const FormsTab: React.FC<FormsTabProps> = ({ websiteId, websiteDomain }) 
                 </Alert>
             )}
 
-            {/* Loading state */}
-            {loading ? (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        minHeight: 180,
-                    }}
-                >
-                    <CircularProgress size={32} />
-                </Box>
-            ) : filteredForms.length === 0 ? (
-                /* Empty state */
-                <Paper
-                    variant="outlined"
-                    sx={{
-                        p: 4,
-                        textAlign: 'center',
-                        borderRadius: 2,
-                        bgcolor: 'background.paper',
-                        borderColor: 'divider',
-                    }}
-                >
-                    <DynamicForm sx={{ fontSize: 38, color: 'text.disabled', mb: 1 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {searchQuery ? 'No matching forms found' : 'No forms yet'}
-                    </Typography>
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ maxWidth: 440, mx: 'auto', mb: 2.5, fontSize: '0.8125rem' }}
-                    >
-                        {searchQuery
-                            ? `No forms match "${searchQuery}". Try modifying your search query.`
-                            : 'Create your first form (e.g. Contact Form, Newsletter, Quote Request) to collect structured submissions.'}
-                    </Typography>
-                    {canCreate && !searchQuery && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            startIcon={<Add fontSize="small" />}
-                            onClick={handleOpenCreate}
-                            sx={{
-                                textTransform: 'none',
-                                borderRadius: 1.5,
-                                fontWeight: 600,
-                                fontSize: '0.8125rem',
-                            }}
-                        >
-                            Create First Form
-                        </Button>
-                    )}
-                </Paper>
-            ) : (
-                /* Forms Table */
-                <TableContainer
-                    component={Paper}
-                    variant="outlined"
-                    sx={{ borderRadius: 2, borderColor: 'divider', overflow: 'hidden' }}
-                >
-                    <Table size="small">
-                        <TableHead sx={{ bgcolor: 'action.hover' }}>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>
-                                    NAME
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>
-                                    ENDPOINT SLUG
-                                </TableCell>
-                                <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}
-                                >
-                                    NOTIFICATIONS
-                                </TableCell>
-                                <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}
-                                >
-                                    FIELDS
-                                </TableCell>
-                                <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}
-                                >
-                                    SUBMISSIONS
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>
-                                    UPDATED
-                                </TableCell>
-                                <TableCell
-                                    align="right"
-                                    sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.5, pr: 2 }}
-                                >
-                                    ACTIONS
-                                </TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredForms.map((f) => (
-                                <TableRow
-                                    key={f.id}
-                                    hover
-                                    sx={{
-                                        '&:last-child td, &:last-child th': { border: 0 },
-                                        cursor: 'pointer',
-                                    }}
-                                    onClick={() => navigate(`/websites/${websiteId}/forms/${f.id}`)}
-                                >
-                                    <TableCell sx={{ py: 1.5 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                            {f.name}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell sx={{ py: 1.5 }}>
-                                        <Chip
-                                            label={`/forms/${f.slug}/submit`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{
-                                                fontFamily: 'monospace',
-                                                fontSize: '0.75rem',
-                                                height: 22,
-                                                bgcolor: 'action.hover',
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center" sx={{ py: 1.5 }}>
-                                        {f.sendEmail ? (
-                                            <Tooltip
-                                                title={`Recipients: ${(f.recipientEmails || []).join(', ') || 'None'}${
-                                                    f.emailTemplate ? ` • Template: ${f.emailTemplate.name}` : ''
-                                                }`}
-                                            >
-                                                <Chip
-                                                    icon={<MarkEmailRead sx={{ fontSize: '13px !important' }} />}
-                                                    label="Email Enabled"
-                                                    size="small"
-                                                    color="success"
-                                                    variant="outlined"
-                                                    sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }}
-                                                />
-                                            </Tooltip>
-                                        ) : (
-                                            <Chip
-                                                icon={<NotificationsOff sx={{ fontSize: '13px !important' }} />}
-                                                label="Disabled"
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{ fontSize: '0.7rem', height: 22, color: 'text.secondary' }}
-                                            />
-                                        )}
-                                    </TableCell>
-                                    <TableCell align="center" sx={{ py: 1.5 }}>
-                                        <Chip
-                                            label={`${f.fieldsCount || 0} fields`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ fontSize: '0.7rem', height: 22 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center" sx={{ py: 1.5 }}>
-                                        <Chip
-                                            label={`${f.submissionsCount || 0} entries`}
-                                            size="small"
-                                            color={f.submissionsCount ? 'primary' : 'default'}
-                                            variant={f.submissionsCount ? 'filled' : 'outlined'}
-                                            sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ py: 1.5 }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {new Date(f.updatedAt).toLocaleDateString(undefined, {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                            })}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ py: 1.5, pr: 2 }} onClick={(e) => e.stopPropagation()}>
-                                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-                                            <Tooltip title="Manage Form & Fields">
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    onClick={() => navigate(`/websites/${websiteId}/forms/${f.id}`)}
-                                                >
-                                                    <ArrowForward fontSize="small" sx={{ fontSize: 18 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            {canUpdate && (
-                                                <Tooltip title="Edit Form Settings">
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e) => handleOpenEdit(f, e)}
-                                                    >
-                                                        <Edit fontSize="small" sx={{ fontSize: 18 }} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
-                                            {canDelete && (
-                                                <Tooltip title="Delete Form">
-                                                    <IconButton
-                                                        size="small"
-                                                        color="error"
-                                                        onClick={(e) => handleOpenDelete(f, e)}
-                                                    >
-                                                        <Delete fontSize="small" sx={{ fontSize: 18 }} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
-                                        </Stack>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            )}
+            {/* ListTable Component */}
+            <ListTable
+                columns={columns}
+                data={paginatedForms}
+                actions={actions}
+                pagination={{
+                    total: filteredForms.length,
+                    limit,
+                    offset: page * limit,
+                    onPageChange: (newPage: number) => setPage(newPage),
+                    onRowsPerPageChange: (newLimit: number) => {
+                        setLimit(newLimit);
+                        setPage(0);
+                    },
+                }}
+                emptyMessage={
+                    loading
+                        ? 'Loading forms...'
+                        : searchQuery
+                        ? `No forms match "${searchQuery}".`
+                        : 'No forms yet. Create your first form to collect structured submissions.'
+                }
+            />
 
             {/* Create / Edit Form Dialog */}
             <FormFormDialog

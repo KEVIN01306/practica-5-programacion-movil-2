@@ -58,17 +58,24 @@ export class ResendEmailProvider implements IEmailProvider {
                         replyTo: options.replyTo,
                     });
 
-                    // If custom domain is not verified in Resend, automatically fallback to default fromEmail
-                    const isUnverifiedDomain =
-                        response.error &&
-                        (response.error.message.includes('not verified') ||
-                            (response.error as any).statusCode === 403);
-
-                    if (isUnverifiedDomain && activeFrom !== this.fromEmail && this.fromEmail) {
+                    // If custom from address fails for any reason (unverified domain, 403, 422, format), automatically fallback to default verified fromEmail
+                    if (response.error && activeFrom !== this.fromEmail && this.fromEmail) {
                         Logger.warn(
-                            `[ResendEmailProvider] Custom domain in '${activeFrom}' is not verified on Resend. Falling back to '${this.fromEmail}' for recipient ${recipient}. Please verify domain at https://resend.com/domains to send directly from your domain.`
+                            `[ResendEmailProvider] Custom from '${activeFrom}' failed (${response.error.message}). Falling back to default verified sender '${this.fromEmail}' for recipient ${recipient}.`
                         );
-                        activeFrom = this.fromEmail;
+
+                        // Extract clean display name (e.g. "rapidol" from "rapidol <noresponder@rapidolusa.com>")
+                        let cleanName = '';
+                        if (activeFrom.includes('<')) {
+                            cleanName = activeFrom.split('<')[0]?.replace(/[<>"'\\]/g, '').trim() || '';
+                        } else if (!activeFrom.includes('@')) {
+                            cleanName = activeFrom.replace(/[<>"'\\]/g, '').trim();
+                        }
+
+                        activeFrom = cleanName && !this.fromEmail.includes('<')
+                            ? `${cleanName} <${this.fromEmail}>`
+                            : this.fromEmail;
+
                         response = await this.resend.emails.send({
                             from: activeFrom,
                             to: recipient,

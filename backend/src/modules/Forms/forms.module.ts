@@ -103,7 +103,8 @@ export const submitPublicFormUseCase = new SubmitPublicFormUseCase(
     formSubmissionsRepository,
     contactsRepository,
     emailTemplatesRepository,
-    emailProvider
+    emailProvider,
+    websitesRepository
 );
 
 // Controllers

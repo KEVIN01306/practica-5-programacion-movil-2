@@ -284,9 +284,11 @@ export const WebsiteDetailPage: React.FC = () => {
                 <Tabs
                     value={activeTab}
                     onChange={handleTabChange}
-                    variant="standard"
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
                     sx={{
-                        px: 2,
+                        px: { xs: 0.5, sm: 2 },
                         borderBottom: 1,
                         borderColor: 'divider',
                         minHeight: 42,
@@ -296,6 +298,7 @@ export const WebsiteDetailPage: React.FC = () => {
                             minHeight: 42,
                             py: 1,
                             fontSize: '0.8125rem',
+                            whiteSpace: 'nowrap',
                         },
                     }}
                 >
@@ -539,7 +542,11 @@ export const WebsiteDetailPage: React.FC = () => {
             {/* Tab Panel 2: Email Templates */}
             {activeTab === 2 && (
                 <Box sx={{ mt: 2.5 }}>
-                    <EmailTemplatesTab websiteId={website.id} websiteName={website.name} />
+                    <EmailTemplatesTab
+                        websiteId={website.id}
+                        websiteName={website.name}
+                        websiteDomain={website.domain}
+                    />
                 </Box>
             )}
 
