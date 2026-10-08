@@ -368,14 +368,14 @@ export const ProfilePage: React.FC = () => {
                     label="Plataforma / Sistema"
                     value={
                         <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            Sistema de Gestión y Archivo de Imágenes
+                            Web Admin System
                         </Typography>
                     }
                 />
                 <ProfileRow
                     icon={<MenuBookOutlined />}
                     label="Ámbito Operativo"
-                    value="Gestión de Marcas, Directorios y Archivos Digitales"
+                    value="Administración Central y Gestión de Sitios Web"
                 />
                 <ProfileRow
                     icon={<SecurityOutlined />}

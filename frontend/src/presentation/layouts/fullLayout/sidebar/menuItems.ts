@@ -1,7 +1,7 @@
 import {
     DashboardOutlined,
-    BusinessOutlined,
-    FolderOutlined,
+    LanguageOutlined,
+    ContactsOutlined,
     GroupOutlined,
     AdminPanelSettingsOutlined,
     ManageHistoryOutlined,
@@ -29,20 +29,20 @@ const MenuItems: MenuItem[] = [
         link: '/',
     },
 
-    { group: 'Asset Management', permissions: ['brands:read', 'folders:read', 'assets:read'] },
+    { group: 'Sites & Audience', permissions: ['websites:read', 'contacts:read'] },
     {
-        module: 'Catalog',
-        name: 'Brands',
-        icon: BusinessOutlined,
-        link: '/brands',
-        permissions: ['brands:read'],
+        module: 'Websites',
+        name: 'Websites',
+        icon: LanguageOutlined,
+        link: '/websites',
+        permissions: ['websites:read'],
     },
     {
-        module: 'Directories',
-        name: 'Directories Tree',
-        icon: FolderOutlined,
-        link: '/directorios',
-        permissions: ['folders:read', 'assets:read', 'brands:read'],
+        module: 'Contacts',
+        name: 'Contacts',
+        icon: ContactsOutlined,
+        link: '/contacts',
+        permissions: ['contacts:read'],
     },
 
     { group: 'Administration', permissions: ['users:read', 'roles:read', 'audit:read', 'roles:permissions:update'] },
@@ -69,7 +69,6 @@ const MenuItems: MenuItem[] = [
     },
 
     { group: 'Account' },
-
     {
         name: 'My Profile',
         icon: AdminPanelSettingsOutlined,

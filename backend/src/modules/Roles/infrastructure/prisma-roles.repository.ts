@@ -163,7 +163,7 @@ export class PrismaRolesRepository implements RolesRepository {
             }
         });
 
-        return rolePermissions.map((rp) => rp.permission as Permission);
+        return rolePermissions.map((rp: any) => rp.permission as Permission);
     }
 
     async updateRolePermissions(roleId: string, permissionIds: string[]): Promise<UpdateRolePermissionsResult> {
@@ -200,7 +200,7 @@ export class PrismaRolesRepository implements RolesRepository {
 
         // Calculate current permissions
         const currentPermissionMap = new Map<string, string>(); // permissionId -> action
-        role.rolePermissions.forEach(rp => {
+        role.rolePermissions.forEach((rp: any) => {
             currentPermissionMap.set(rp.permissionId, rp.permission.action);
         });
 
@@ -217,7 +217,7 @@ export class PrismaRolesRepository implements RolesRepository {
                 where: { id: { in: toAdd } },
                 select: { action: true }
             });
-            addedPermissions = addedPerms.map(p => p.action);
+            addedPermissions = addedPerms.map((p: any) => p.action);
         }
 
         const removedPermissions = toRemove.map(id => currentPermissionMap.get(id) || id);
@@ -225,7 +225,7 @@ export class PrismaRolesRepository implements RolesRepository {
         // Execute changes atomically inside a Prisma transaction
         await this.prisma.$transaction(async (tx) => {
             if (toRemove.length > 0) {
-                await tx.rolePermission.deleteMany({
+                await (tx as any).rolePermission.deleteMany({
                     where: {
                         roleId,
                         permissionId: { in: toRemove }
@@ -234,8 +234,8 @@ export class PrismaRolesRepository implements RolesRepository {
             }
 
             if (toAdd.length > 0) {
-                await tx.rolePermission.createMany({
-                    data: toAdd.map(permissionId => ({
+                await (tx as any).rolePermission.createMany({
+                    data: toAdd.map((permissionId: string) => ({
                         roleId,
                         permissionId
                     })),

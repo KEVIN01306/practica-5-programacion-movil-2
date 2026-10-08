@@ -10,9 +10,6 @@
     "lib": [
       "ES2022"
     ],
-    "types": [
-      "node"
-    ],
     /* Path Aliases (Rutas Absolutas) */
     "baseUrl": "./src",
     "paths": {
@@ -56,6 +53,7 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/**/*.test.ts"
   ]
 }

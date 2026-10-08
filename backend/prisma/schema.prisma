@@ -7,9 +7,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// ------------------------------------------------------
+// ======================================================
 // ENUMS
-// ------------------------------------------------------
+// ======================================================
 
 enum AuditAction {
   LOGIN
@@ -19,9 +19,33 @@ enum AuditAction {
   DELETE
 }
 
-// ------------------------------------------------------
-// USER & AUTHENTICATION
-// ------------------------------------------------------
+enum FieldType {
+  STRING
+  TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  JSON
+  URL
+}
+
+enum SubmissionStatus {
+  PENDING
+  PROCESSED
+  SPAM
+  FAILED
+}
+
+enum ContactStatus {
+  LEAD
+  ACTIVE
+  UNSUBSCRIBED
+  ARCHIVED
+}
+
+// ======================================================
+// USER & AUTHENTICATION (RBAC)
+// ======================================================
 
 model User {
   id           String   @id @default(uuid())
@@ -38,6 +62,7 @@ model User {
   userRoles UserRole[]
   session   UserSession?
   auditLogs AuditLog[]
+  websites  Website[]    @relation("UserWebsites")
 
   @@map("users")
 }
@@ -45,7 +70,7 @@ model User {
 model UserSession {
   id        String   @id @default(uuid())
   userId    String   @unique @map("user_id")
-  token     String   @unique @db.VarChar(500) // Access or Refresh Token reference
+  token     String   @unique @db.VarChar(500)
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -54,15 +79,11 @@ model UserSession {
   @@map("user_sessions")
 }
 
-// ------------------------------------------------------
-// ROLES & PERMISSIONS SYSTEM (RBAC)
-// ------------------------------------------------------
-
 model Role {
   id          String   @id @default(uuid())
-  name        String   @unique // e.g., "SUPER_ADMIN", "ADMIN", "USER"
+  name        String   @unique // Ej: "SUPER_ADMIN", "ADMIN", "USER"
   description String?
-  isSystem    Boolean  @default(false) @map("is_system") // System roles that cannot be deleted
+  isSystem    Boolean  @default(false) @map("is_system")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -74,7 +95,7 @@ model Role {
 
 model Permission {
   id          String   @id @default(uuid())
-  action      String   @unique // Key string, e.g., "users:create", "system:audit:read"
+  action      String   @unique // Ej: "users:create", "websites:delete"
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -83,7 +104,6 @@ model Permission {
   @@map("permissions")
 }
 
-// Join Table: Users <-> Roles
 model UserRole {
   userId     String   @map("user_id")
   roleId     String   @map("role_id")
@@ -96,7 +116,6 @@ model UserRole {
   @@map("user_roles")
 }
 
-// Join Table: Roles <-> Permissions
 model RolePermission {
   roleId       String   @map("role_id")
   permissionId String   @map("permission_id")
@@ -109,101 +128,193 @@ model RolePermission {
   @@map("role_permissions")
 }
 
-// ------------------------------------------------------
-// BRAND & DIRECTORY ASSET MANAGEMENT
-// ------------------------------------------------------
+// ======================================================
+// WEBSITES & MULTI-TENANCY
+// ======================================================
 
-model Brand {
+model Website {
+  id              String   @id @default(uuid())
+  name            String
+  domain          String   @unique
+  apiKey          String   @unique @default(uuid()) @map("api_key")
+  hostingProvider String?  @map("hosting_provider")
+  hostingNotes    String?  @map("hosting_notes") @db.Text
+  isActive        Boolean  @default(true) @map("is_active")
+  ownerId         String?  @map("owner_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  owner          User?           @relation("UserWebsites", fields: [ownerId], references: [id], onDelete: SetNull)
+  contentTypes   ContentType[]
+  forms          Form[]
+  emailTemplates EmailTemplate[]
+  contacts       Contact[]
+
+  @@map("websites")
+}
+
+// ======================================================
+// CONSUMABLES / CONTENT BUILDER (HEADLESS CMS)
+// ======================================================
+
+model ContentType {
   id          String   @id @default(uuid())
-  name        String   @unique
+  websiteId   String   @map("website_id")
+  name        String // Ej: "Productos", "Blog Posts"
+  slug        String // Ej: "productos", "blog-posts"
   description String?  @db.Text
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  folders Folder[]
-  assets  Asset[]
+  website Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  fields  ContentField[]
+  items   ContentItem[]
 
-  @@map("brands")
+  @@unique([websiteId, slug])
+  @@map("content_types")
 }
 
-model Folder {
+model ContentField {
+  id            String    @id @default(uuid())
+  contentTypeId String    @map("content_type_id")
+  name          String // Ej: "Precio", "En Stock"
+  key           String // Ej: "price", "in_stock"
+  type          FieldType @default(STRING)
+  isRequired    Boolean   @default(false) @map("is_required")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  contentType ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([contentTypeId, key])
+  @@map("content_fields")
+}
+
+model ContentItem {
+  id            String   @id @default(uuid())
+  contentTypeId String   @map("content_type_id")
+  data          Json // Payload flexible: { "price": 99.99, "in_stock": true }
+  isPublished   Boolean  @default(true) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  contentType ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+
+  @@map("content_items")
+}
+
+// ======================================================
+// EMAIL TEMPLATES
+// ======================================================
+
+model EmailTemplate {
   id          String   @id @default(uuid())
-  name        String
-  description String?  @db.Text
-  brandId     String   @map("brand_id")
-  parentId    String?  @map("parent_id")
+  websiteId   String   @map("website_id")
+  name        String // Ej: "Notificación de Contacto"
+  subject     String // Ej: "Nuevo mensaje de {{name}}"
+  htmlContent String   @map("html_content") @db.Text
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  // Relaciones
-  brand    Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  parent   Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children Folder[] @relation("FolderHierarchy")
-  assets   Asset[]
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  forms   Form[]
 
-  // Evita duplicar nombres de carpetas en un mismo nivel dentro de una marca
-  @@unique([name, brandId, parentId])
-  @@map("folders")
+  @@map("email_templates")
 }
 
-// ------------------------------------------------------
+// ======================================================
+// FORM BUILDER & SUBMISSIONS
+// ======================================================
+
+model Form {
+  id              String   @id @default(uuid())
+  websiteId       String   @map("website_id")
+  name            String // Ej: "Formulario de Contacto Principal"
+  slug            String // Identificador de endpoint: /api/v1/forms/:slug/submit
+  sendEmail       Boolean  @default(false) @map("send_email")
+  emailFrom       String?  @map("email_from")
+  recipientEmails Json?    @map("recipient_emails")
+  emailTemplateId String?  @map("email_template_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  website       Website          @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  emailTemplate EmailTemplate?   @relation(fields: [emailTemplateId], references: [id], onDelete: SetNull)
+  fields        FormField[]
+  submissions   FormSubmission[]
+
+  @@unique([websiteId, slug])
+  @@map("forms")
+}
+
+model FormField {
+  id         String    @id @default(uuid())
+  formId     String    @map("form_id")
+  label      String // Ej: "Correo Electrónico"
+  key        String // Ej: "email"
+  type       FieldType @default(STRING)
+  isRequired Boolean   @default(false) @map("is_required")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, key])
+  @@map("form_fields")
+}
+
+model FormSubmission {
+  id        String           @id @default(uuid())
+  formId    String           @map("form_id")
+  contactId String?          @map("contact_id")
+  data      Json // Raw data: { "name": "Juan", "email": "juan@example.com", "message": "Hola" }
+  status    SubmissionStatus @default(PENDING)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  form    Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@map("form_submissions")
+}
+
+// ======================================================
+// CONTACTS & CRM CORE
+// ======================================================
+
+model Contact {
+  id         String        @id @default(uuid())
+  websiteId  String        @map("website_id")
+  email      String
+  firstName  String?       @map("first_name")
+  lastName   String?       @map("last_name")
+  phone      String?
+  company    String?
+  status     ContactStatus @default(LEAD)
+  customData Json?         @map("custom_data") // Datos extra recolectados
+  tags       Json? // Ej: ["landing-astro", "boletin"]
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  website     Website          @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  submissions FormSubmission[]
+
+  @@unique([websiteId, email])
+  @@index([email])
+  @@map("contacts")
+}
+
+// ======================================================
 // AUDIT SYSTEM
-// ------------------------------------------------------
+// ======================================================
 
 model AuditLog {
   id         String      @id @default(uuid())
   userId     String?     @map("user_id")
   action     AuditAction
-  resource   String // Affected module or entity e.g., "auth", "user"
+  resource   String // Ej: "websites", "users", "forms"
   resourceId String?     @map("resource_id")
-  details    Json? // Metadata: IP, User-Agent, Changes Diffs, etc.
+  details    Json?
   createdAt  DateTime    @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
-}
-
-model Asset {
-  id          String    @id @default(uuid())
-  name        String // Nombre descriptivo o título
-  description String?   @db.Text
-  url         String    @db.VarChar(2048)
-  sku         String?   @db.VarChar(100) // SKU o código de referencia comercial
-  type        AssetType @default(OTHER) // Clasificación: IMAGE, DOCUMENT, etc.
-
-  // Metadatos técnicos del archivo
-  fileName  String  @map("file_name") // Nombre original con extensión (ej: "catalogo_2026.pdf")
-  mimeType  String  @map("mime_type") // ej: "image/png", "application/pdf"
-  sizeBytes BigInt  @map("size_bytes") // Tamaño en bytes
-  extension String? @db.VarChar(10) // ej: "jpg", "pdf", "docx"
-  metadata  Json? // Metadatos extra (ej: dimensiones si es imagen, páginas si es PDF, duración si es video)
-
-  brandId   String   @map("brand_id")
-  folderId  String?  @map("folder_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relaciones
-  brand  Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-
-  @@index([sku])
-  @@index([type])
-  @@index([brandId])
-  @@index([folderId])
-  @@map("assets")
-}
-
-// ------------------------------------------------------
-// ENUMS
-// ------------------------------------------------------
-
-enum AssetType {
-  IMAGE
-  DOCUMENT
-  VIDEO
-  AUDIO
-  ARCHIVE // .zip, .rar, etc.
-  OTHER
 }

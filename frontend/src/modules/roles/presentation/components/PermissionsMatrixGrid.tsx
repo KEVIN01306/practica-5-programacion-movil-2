@@ -37,9 +37,9 @@ interface PermissionsMatrixGridProps {
 const MODULE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
     users: { label: 'Usuarios', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
     roles: { label: 'Roles y Permisos', color: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe' },
-    brands: { label: 'Marcas', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
-    folders: { label: 'Directorios', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-    assets: { label: 'Archivos y Multimedia', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+    websites: { label: 'Sitios Web', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+    'content-types': { label: 'Tipos de Contenido', color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' },
+    'content-fields': { label: 'Campos de Contenido', color: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
     audit: { label: 'Auditoría', color: '#b45309', bg: '#fefce8', border: '#fef08a' },
 };
 

@@ -15,24 +15,26 @@ export class PrismaErrorMapper {
             return error;
         }
 
-        if (error instanceof Prisma.PrismaClientInitializationError) {
-            const message = error.message?.includes("Can't reach database server")
+        const err = error as any;
+
+        if (error instanceof Prisma.PrismaClientInitializationError || err?.name === 'PrismaClientInitializationError') {
+            const message = err?.message?.includes("Can't reach database server")
                 ? 'DATABASE_UNAVAILABLE'
-                : (error.message || 'Prisma initialization error');
+                : (err?.message || 'Prisma initialization error');
 
             return new DatabaseError(message);
         }
 
         if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === 'P2002'
+            (error instanceof Prisma.PrismaClientKnownRequestError || err?.name === 'PrismaClientKnownRequestError') &&
+            err?.code === 'P2002'
         ) {
             return new UniqueConstraintError()
         }
 
         if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === 'P2025'
+            (error instanceof Prisma.PrismaClientKnownRequestError || err?.name === 'PrismaClientKnownRequestError') &&
+            err?.code === 'P2025'
         ) {
             return new NotFoundPersistenceError()
         }

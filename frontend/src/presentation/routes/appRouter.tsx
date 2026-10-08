@@ -1,8 +1,8 @@
 import { Suspense, lazy } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { authRoutes } from '../../modules/auth/presentation/auth.routes';
-import { brandsRoutes } from '../../modules/brands/presentation/brands.routes';
-import { directoriosRoutes } from '../../modules/directorios/presentation/directorios.routes';
+import { websitesRoutes } from '../../modules/websites/presentation/websites.routes';
+import { contactsRoutes } from '../../modules/contacts/presentation/contacts.routes';
 import { usersRoutes } from '../../modules/users/presentation/users.routes';
 import { profileRoutes } from '../../modules/profile/presentation/profile.routes';
 import { auditRoutes } from '../../modules/audit/presentation/audit.routes';
@@ -58,12 +58,12 @@ export const appRouter = createBrowserRouter([
 
                     // ── Module routes ──
                     {
-                        path: 'brands',
-                        children: [...brandsRoutes],
+                        path: 'websites',
+                        children: [...websitesRoutes],
                     },
                     {
-                        path: 'directorios',
-                        children: [...directoriosRoutes],
+                        path: 'contacts',
+                        children: [...contactsRoutes],
                     },
                     {
                         path: 'users',
@@ -81,7 +81,6 @@ export const appRouter = createBrowserRouter([
                         path: 'profile',
                         children: [...profileRoutes],
                     },
-
                 ],
             },
         ],

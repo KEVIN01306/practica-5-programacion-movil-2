@@ -52,7 +52,7 @@ export class PrismaUsersRepository implements UsersRepository {
                     });
                     if (roles.length > 0) {
                         await this.prisma.userRole.createMany({
-                            data: roles.map(r => ({
+                            data: roles.map((r: any) => ({
                                 userId: id,
                                 roleId: r.id
                             }))
@@ -126,7 +126,7 @@ export class PrismaUsersRepository implements UsersRepository {
                     createdAt: 'desc'
                 }
             });
-            return users.map(user => UsersMapper.toGetSimpleUser(user));
+            return users.map((user: any) => UsersMapper.toGetSimpleUser(user));
         } catch (error) {
             throw PrismaErrorMapper.map(error);
         }
@@ -169,7 +169,7 @@ export class PrismaUsersRepository implements UsersRepository {
             ]);
 
             return {
-                data: users.map(user => UsersMapper.toGetSimpleUser(user)),
+                data: users.map((user: any) => UsersMapper.toGetSimpleUser(user)),
                 total
             };
         } catch (error) {

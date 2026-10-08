@@ -117,7 +117,7 @@ export class PrismaAuditRepository implements AuditRepository {
             ]);
 
             return {
-                data: records.map(log => AuditMapper.toDomain(log)),
+                data: records.map((log: any) => AuditMapper.toDomain(log)),
                 total
             };
         } catch (error) {
