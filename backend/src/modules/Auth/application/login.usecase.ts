@@ -2,8 +2,6 @@ import AppError from "@shared/errors/AppError.js";
 import type { HashProvider } from "@shared/domain/hash.provider.js";
 import type { AuthRepository } from "../domain/auth.repository.js";
 import type JwtProvider from "../domain/jwt.provider.js";
-import type { AuditLogService } from "../../Audit/application/audit-log.service.js";
-import type { AuditContext } from "../../Audit/domain/audit-log.entity.js";
 
 interface LoginDTO {
     email: string;
@@ -17,9 +15,8 @@ interface LoginResponse {
         id: string;
         name: string;
         email: string;
-        permissions: string[];
+        role: string;
         roles: string[];
-        isVerify: boolean;
     };
 }
 
@@ -27,11 +24,10 @@ export class LoginUseCase {
     constructor(
         private readonly authRepository: AuthRepository,
         private readonly jwtProvider: JwtProvider,
-        private readonly hashProvider: HashProvider,
-        private readonly auditLogService: AuditLogService
+        private readonly hashProvider: HashProvider
     ) { }
 
-    async execute(data: LoginDTO, context?: AuditContext): Promise<LoginResponse> {
+    async execute(data: LoginDTO): Promise<LoginResponse> {
         const { email, password } = data;
 
         const user = await this.authRepository.findByEmail(email);
@@ -62,8 +58,7 @@ export class LoginUseCase {
 
         const { accessToken, refreshToken } = await this.jwtProvider.generateTokens(
             user.id,
-            user.roles,
-            user.permissions
+            user.role
         );
 
         const expiresAt = new Date();
@@ -75,19 +70,6 @@ export class LoginUseCase {
             expiresAt
         );
 
-        // Record LOGIN Audit Log
-        await this.auditLogService.record({
-            userId: user.id,
-            action: "LOGIN",
-            resource: "auth",
-            resourceId: user.id,
-            context,
-            details: {
-                email: user.email,
-                loginMethod: "password"
-            }
-        });
-
         return {
             accessToken,
             refreshToken,
@@ -95,9 +77,8 @@ export class LoginUseCase {
                 id: user.id,
                 name: `${user.firstName} ${user.lastName}`.trim(),
                 email: user.email,
-                permissions: user.permissions,
+                role: user.role,
                 roles: user.roles,
-                isVerify: user.isVerify,
             }
         };
     }

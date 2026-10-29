@@ -4,10 +4,8 @@ import AppError from "@shared/errors/AppError.js";
 import type { HashProvider } from "@shared/domain/hash.provider.js";
 import type { EmailProvider } from "@shared/domain/email.provider.js";
 import { UniqueConstraintError } from "@shared/db/database/errors/UniqueConstraintError.js";
-import type { AuditLogService } from "../../Audit/application/audit-log.service.js";
-import type { AuditContext } from "../../Audit/domain/audit-log.entity.js";
-import { isValidUserEmailDomain } from "../presentation/users.schemas.js";
 import { generateSecurePassword } from "@shared/utils/password-generator.util.js";
+import type { Role } from "@prisma/client";
 
 export interface CreateUserRequest {
     email: string;
@@ -15,6 +13,7 @@ export interface CreateUserRequest {
     autoGeneratePassword?: boolean;
     firstName: string;
     lastName: string;
+    role?: Role;
     roles?: string[];
 }
 
@@ -22,20 +21,11 @@ export class CreateUserUseCase {
     constructor(
         private readonly usersRepository: UsersRepository,
         private readonly hashProvider: HashProvider,
-        private readonly emailProvider: EmailProvider,
-        private readonly auditLogService: AuditLogService
+        private readonly emailProvider: EmailProvider
     ) {}
 
-    async execute(data: CreateUserRequest, context?: AuditContext): Promise<GetUser> {
+    async execute(data: CreateUserRequest): Promise<GetUser> {
         try {
-            if (!isValidUserEmailDomain(data.email)) {
-                throw new AppError(
-                    "Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.",
-                    "INVALID_EMAIL_DOMAIN",
-                    400
-                );
-            }
-
             const existingUser = await this.usersRepository.findByEmail(data.email);
             if (existingUser) {
                 throw new AppError("Email already in use", "EMAIL_ALREADY_EXISTS", 400);
@@ -53,47 +43,32 @@ export class CreateUserUseCase {
 
             const passwordHash = await this.hashProvider.hash(rawPassword);
 
-            // User starts unverified (isVerify = false)
             const user = await this.usersRepository.create({
                 email: data.email,
                 passwordHash,
                 firstName: data.firstName,
                 lastName: data.lastName,
+                role: data.role,
                 roles: data.roles,
-                isVerify: false,
             });
 
-            // Send credentials email via OTP / Email microservice (POST /api/v1/email/send)
-            const fullName = `${user.firstName} ${user.lastName}`.trim();
-            const emailResult = await this.emailProvider.sendWelcomeCredentialsEmail(
-                user.email,
-                fullName,
-                rawPassword
-            );
-
-            // Record audit log
-            await this.auditLogService.record({
-                userId: context?.userId,
-                action: 'CREATE',
-                resource: 'user',
-                resourceId: user.id,
-                context,
-                details: {
-                    email: user.email,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    roles: user.roles,
-                    isActive: user.isActive,
-                    isVerify: false,
-                    welcomeEmailSent: emailResult.success,
-                    emailMessageId: emailResult.messageId || null,
-                }
-            });
+            // Optional welcome email
+            let emailSent = false;
+            try {
+                const fullName = `${user.firstName} ${user.lastName}`.trim();
+                const emailResult = await this.emailProvider.sendWelcomeCredentialsEmail(
+                    user.email,
+                    fullName,
+                    rawPassword
+                );
+                emailSent = emailResult.success;
+            } catch (err) {
+                console.warn("Could not send credentials email:", err);
+            }
 
             return {
                 ...user,
-                isVerify: false,
-                emailSent: emailResult.success,
+                emailSent,
                 generatedPassword: data.autoGeneratePassword ? rawPassword : undefined,
             };
         } catch (error) {

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { type PrismaClient, Role } from "@prisma/client";
 import type { UsersRepository } from "../domain/users.repository.js";
 import type { User, CreateUser, UpdateUser, GetUser, GetSimpleUser } from "../domain/user.entity.js";
 import { PrismaErrorMapper } from "@shared/db/database/prisma/PrismaErrorMapper.js";
@@ -7,31 +7,28 @@ import { UsersMapper } from "./mappers/users.mapper.js";
 export class PrismaUsersRepository implements UsersRepository {
     constructor(private readonly prisma: PrismaClient) { }
 
+    private resolveRole(roleInput?: string | Role, rolesInput?: string[]): Role {
+        if (roleInput && Object.values(Role).includes(roleInput as Role)) {
+            return roleInput as Role;
+        }
+        if (rolesInput && rolesInput.length > 0) {
+            const match = rolesInput.find(r => Object.values(Role).includes(r as Role));
+            if (match) return match as Role;
+        }
+        return Role.OPERATOR;
+    }
+
     async create(data: CreateUser): Promise<GetUser> {
         try {
-            const roleNames = data.roles && data.roles.length > 0 ? data.roles : ['USER'];
+            const role = this.resolveRole(data.role, data.roles);
             const user = await this.prisma.user.create({
                 data: {
                     email: data.email,
                     passwordHash: data.passwordHash,
                     firstName: data.firstName,
                     lastName: data.lastName,
-                    isActive: true,
-                    isVerify: data.isVerify !== undefined ? data.isVerify : false,
-                    userRoles: {
-                        create: roleNames.map(name => ({
-                            role: {
-                                connect: { name }
-                            }
-                        }))
-                    }
-                },
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
+                    role,
+                    isActive: true
                 }
             });
             return UsersMapper.toGetUser(user);
@@ -42,40 +39,18 @@ export class PrismaUsersRepository implements UsersRepository {
 
     async update(id: string, data: UpdateUser): Promise<GetUser> {
         try {
-            if (data.roles !== undefined) {
-                await this.prisma.userRole.deleteMany({
-                    where: { userId: id }
-                });
-                if (data.roles.length > 0) {
-                    const roles = await this.prisma.role.findMany({
-                        where: { name: { in: data.roles } }
-                    });
-                    if (roles.length > 0) {
-                        await this.prisma.userRole.createMany({
-                            data: roles.map((r: any) => ({
-                                userId: id,
-                                roleId: r.id
-                            }))
-                        });
-                    }
-                }
+            const updateData: any = {};
+            if (data.email !== undefined) updateData.email = data.email;
+            if (data.firstName !== undefined) updateData.firstName = data.firstName;
+            if (data.lastName !== undefined) updateData.lastName = data.lastName;
+            if (data.passwordHash !== undefined) updateData.passwordHash = data.passwordHash;
+            if (data.role !== undefined || data.roles !== undefined) {
+                updateData.role = this.resolveRole(data.role, data.roles);
             }
 
             const user = await this.prisma.user.update({
                 where: { id },
-                data: {
-                    email: data.email,
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    passwordHash: data.passwordHash
-                },
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
-                }
+                data: updateData
             });
             return UsersMapper.toGetUser(user);
         } catch (error) {
@@ -86,14 +61,7 @@ export class PrismaUsersRepository implements UsersRepository {
     async findById(id: string): Promise<GetUser | null> {
         try {
             const user = await this.prisma.user.findUnique({
-                where: { id },
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
-                }
+                where: { id }
             });
             return user ? UsersMapper.toGetUser(user) : null;
         } catch (error) {
@@ -115,13 +83,6 @@ export class PrismaUsersRepository implements UsersRepository {
     async findAll(): Promise<GetSimpleUser[]> {
         try {
             const users = await this.prisma.user.findMany({
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
-                },
                 orderBy: {
                     createdAt: 'desc'
                 }
@@ -143,9 +104,9 @@ export class PrismaUsersRepository implements UsersRepository {
             if (filters?.q) {
                 const query = filters.q.trim();
                 whereClause.OR = [
-                    { email: { contains: query } },
-                    { firstName: { contains: query } },
-                    { lastName: { contains: query } }
+                    { email: { contains: query, mode: 'insensitive' } },
+                    { firstName: { contains: query, mode: 'insensitive' } },
+                    { lastName: { contains: query, mode: 'insensitive' } }
                 ];
             }
 
@@ -154,13 +115,6 @@ export class PrismaUsersRepository implements UsersRepository {
                     where: whereClause,
                     skip: offset,
                     take: limit,
-                    include: {
-                        userRoles: {
-                            select: {
-                                role: { select: { name: true } }
-                            }
-                        }
-                    },
                     orderBy: {
                         createdAt: 'desc'
                     }
@@ -178,28 +132,17 @@ export class PrismaUsersRepository implements UsersRepository {
     }
 
     async findAllRoles(): Promise<{ id: string; name: string; description: string | null }[]> {
-        try {
-            return await this.prisma.role.findMany({
-                select: { id: true, name: true, description: true },
-                orderBy: { name: 'asc' }
-            });
-        } catch (error) {
-            throw PrismaErrorMapper.map(error);
-        }
+        return [
+            { id: Role.ADMIN, name: Role.ADMIN, description: "Administrador con control total del sistema e inventario" },
+            { id: Role.OPERATOR, name: Role.OPERATOR, description: "Operador de inventario (entradas, salidas y ajustes de stock)" }
+        ];
     }
 
     async activate(id: string): Promise<GetUser> {
         try {
             const user = await this.prisma.user.update({
                 where: { id },
-                data: { isActive: true },
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
-                }
+                data: { isActive: true }
             });
             return UsersMapper.toGetUser(user);
         } catch (error) {
@@ -229,29 +172,15 @@ export class PrismaUsersRepository implements UsersRepository {
         }
     }
 
-    async updateVerification(id: string, isVerify: boolean): Promise<void> {
-        try {
-            await this.prisma.user.update({
-                where: { id },
-                data: { isVerify }
-            });
-        } catch (error) {
-            throw PrismaErrorMapper.map(error);
-        }
+    async updateVerification(_id: string, _isVerify: boolean): Promise<void> {
+        // No-op: isVerify column removed from schema
     }
 
     async disable(id: string): Promise<GetUser> {
         try {
             const user = await this.prisma.user.update({
                 where: { id },
-                data: { isActive: false },
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
-                }
+                data: { isActive: false }
             });
             return UsersMapper.toGetUser(user);
         } catch (error) {
@@ -263,14 +192,7 @@ export class PrismaUsersRepository implements UsersRepository {
         try {
             const user = await this.prisma.user.update({
                 where: { id },
-                data: { isActive: false },
-                include: {
-                    userRoles: {
-                        select: {
-                            role: { select: { name: true } }
-                        }
-                    }
-                }
+                data: { isActive: false }
             });
             return UsersMapper.toGetUser(user);
         } catch (error) {

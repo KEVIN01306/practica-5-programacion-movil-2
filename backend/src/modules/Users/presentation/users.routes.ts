@@ -8,14 +8,8 @@ const router = Router();
 const authMiddleware = new AuthMiddleware();
 const validatedMiddleware = new ValidatedMiddleware();
 
-// Protect routes - requires authentication
+// All routes require authentication
 router.use(authMiddleware.routeProtect);
-
-router.get(
-    "/roles",
-    authMiddleware.checkPermissionSome(["users:create", "users:update", "roles:read", "users:read"]),
-    usersController.listRoles
-);
 
 router.patch(
     "/me/password",
@@ -24,21 +18,26 @@ router.patch(
 );
 
 router.get(
+    "/roles",
+    usersController.listRoles
+);
+
+router.get(
     "/",
-    authMiddleware.checkPermission("users:read"),
+    authMiddleware.checkRole(["ADMIN"]),
     usersController.list
 );
 
 router.post(
     "/",
-    authMiddleware.checkPermission("users:create"),
+    authMiddleware.checkRole(["ADMIN"]),
     validatedMiddleware.validateBody(CreateUserSchema),
     usersController.create
 );
 
 router.put(
     "/:id",
-    authMiddleware.checkPermission("users:update"),
+    authMiddleware.checkRole(["ADMIN"]),
     validatedMiddleware.validateParams(UserIdSchema),
     validatedMiddleware.validateBody(UpdateUserSchema),
     usersController.update
@@ -46,21 +45,21 @@ router.put(
 
 router.patch(
     "/:id/activate",
-    authMiddleware.checkPermission("users:update"),
+    authMiddleware.checkRole(["ADMIN"]),
     validatedMiddleware.validateParams(UserIdSchema),
     usersController.activate
 );
 
 router.patch(
     "/:id/disable",
-    authMiddleware.checkPermission("users:update"),
+    authMiddleware.checkRole(["ADMIN"]),
     validatedMiddleware.validateParams(UserIdSchema),
     usersController.disable
 );
 
 router.delete(
     "/:id",
-    authMiddleware.checkPermission("users:delete"),
+    authMiddleware.checkRole(["ADMIN"]),
     validatedMiddleware.validateParams(UserIdSchema),
     usersController.delete
 );

@@ -1,3 +1,5 @@
+import type { Role } from "@prisma/client";
+
 export interface AuthUser {
     id: string;
     firstName: string;
@@ -5,8 +7,7 @@ export interface AuthUser {
     email: string;
     passwordHash: string;
     isActive: boolean;
-    isVerify: boolean;
-    permissions: string[];
+    role: Role;
     roles: string[];
     createdAt?: Date;
 }

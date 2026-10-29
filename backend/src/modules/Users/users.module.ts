@@ -11,7 +11,6 @@ import { ChangePasswordUseCase } from "./application/change-password.usecase.js"
 import { ListRolesUseCase } from "./application/list-roles.usecase.js";
 import { UsersController } from "./presentation/users.controller.js";
 import { HttpEmailProvider } from "../../shared/infrastructure/http-email.provider.js";
-import { auditLogService } from "../Audit/audit.module.js";
 
 const prisma = new PrismaClient();
 
@@ -19,14 +18,14 @@ export const usersRepository = new PrismaUsersRepository(prisma);
 export const hashProvider = new Argon2HashProvider();
 export const emailProvider = new HttpEmailProvider();
 
-export const createUserUseCase = new CreateUserUseCase(usersRepository, hashProvider, emailProvider, auditLogService);
-export const updateUserUseCase = new UpdateUserUseCase(usersRepository, auditLogService);
+export const createUserUseCase = new CreateUserUseCase(usersRepository, hashProvider, emailProvider);
+export const updateUserUseCase = new UpdateUserUseCase(usersRepository);
 export const listUsersUseCase = new ListUsersUseCase(usersRepository);
 export const listRolesUseCase = new ListRolesUseCase(usersRepository);
-export const activateUserUseCase = new ActivateUserUseCase(usersRepository, auditLogService);
-export const disableUserUseCase = new DisableUserUseCase(usersRepository, auditLogService);
-export const deleteUserUseCase = new DeleteUserUseCase(usersRepository, auditLogService);
-export const changePasswordUseCase = new ChangePasswordUseCase(usersRepository, hashProvider, auditLogService);
+export const activateUserUseCase = new ActivateUserUseCase(usersRepository);
+export const disableUserUseCase = new DisableUserUseCase(usersRepository);
+export const deleteUserUseCase = new DeleteUserUseCase(usersRepository);
+export const changePasswordUseCase = new ChangePasswordUseCase(usersRepository, hashProvider);
 
 export const usersController = new UsersController(
     createUserUseCase,

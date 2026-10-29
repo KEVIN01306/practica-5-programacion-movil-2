@@ -2,7 +2,6 @@ import { Router } from "express";
 import { authController } from "../auth.module.js";
 import { ValidatedMiddleware } from "@app/middleware/Validated.middleware.js";
 import { loginSchema } from "./validators/login.schema.js";
-import { SendOtpSchema, VerifyOtpSchema, ResetPasswordSchema } from "./validators/otp.schemas.js";
 import { AuthMiddleware } from "@app/middleware/Auth.middleware.js";
 
 const validatedMiddleware = new ValidatedMiddleware();
@@ -29,20 +28,9 @@ router.get('/me',
     authController.getProfile
 );
 
-// ── Password Reset via OTP routes ───────────────────────────────────────────
-router.post('/otp/send',
-    validatedMiddleware.validateBody(SendOtpSchema),
-    authController.sendOtp
-);
-
-router.post('/otp/verify',
-    validatedMiddleware.validateBody(VerifyOtpSchema),
-    authController.verifyOtp
-);
-
-router.post('/reset-password',
-    validatedMiddleware.validateBody(ResetPasswordSchema),
-    authController.resetPassword
-);
+// ── Password Reset via OTP (Retirado del flujo activo) ───────────────────────
+// router.post('/otp/send', validatedMiddleware.validateBody(SendOtpSchema), authController.sendOtp);
+// router.post('/otp/verify', validatedMiddleware.validateBody(VerifyOtpSchema), authController.verifyOtp);
+// router.post('/reset-password', validatedMiddleware.validateBody(ResetPasswordSchema), authController.resetPassword);
 
 export default router;

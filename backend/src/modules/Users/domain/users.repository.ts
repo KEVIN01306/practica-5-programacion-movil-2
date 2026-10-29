@@ -13,5 +13,5 @@ export interface UsersRepository {
     disable(id: string): Promise<GetUser>;
     softDelete(id: string): Promise<GetUser>;
     updatePassword(id: string, passwordHash: string): Promise<void>;
-    updateVerification(id: string, isVerify: boolean): Promise<void>;
+    updateVerification?(id: string, isVerify: boolean): Promise<void>;
 }

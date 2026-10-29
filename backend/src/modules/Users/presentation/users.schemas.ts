@@ -1,28 +1,14 @@
 import { z } from "zod";
 
-export const ALLOWED_USER_EMAIL_DOMAINS = ["pharmadel.com", "cadimportinc.com", "gmail.com"] as const;
-
-export const isValidUserEmailDomain = (email?: string | null): boolean => {
-    if (!email || typeof email !== "string") return false;
-    const parts = email.trim().toLowerCase().split("@");
-    if (parts.length !== 2) return false;
-    const domain = parts[1] ? parts[1] : "";
-    return (ALLOWED_USER_EMAIL_DOMAINS as readonly string[]).includes(domain);
-};
-
 export const CreateUserSchema = z
     .object({
-        email: z
-            .string()
-            .email("Invalid email format")
-            .refine(isValidUserEmailDomain, {
-                message: "Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.",
-            }),
+        email: z.string().email("Invalid email format"),
         passwordRaw: z.string().min(8, "Password must be at least 8 characters long").optional(),
         autoGeneratePassword: z.boolean().optional(),
         firstName: z.string().min(1, "First name is required"),
         lastName: z.string().min(1, "Last name is required"),
-        roles: z.array(z.string()).min(1, "At least one role is required").default(["USER"]),
+        role: z.enum(["ADMIN", "OPERATOR"]).default("OPERATOR"),
+        roles: z.array(z.string()).optional(),
     })
     .refine((data) => data.autoGeneratePassword || (data.passwordRaw && data.passwordRaw.length >= 8), {
         message: "Debe ingresar una contraseña de al menos 8 caracteres o seleccionar 'Generar contraseña automáticamente'",
@@ -30,16 +16,11 @@ export const CreateUserSchema = z
     });
 
 export const UpdateUserSchema = z.object({
-    email: z
-        .string()
-        .email("Invalid email format")
-        .refine(isValidUserEmailDomain, {
-            message: "Dominio inválido para este usuario. Solo se permiten correos @pharmadel.com o @cadimportinc.com.",
-        })
-        .optional(),
+    email: z.string().email("Invalid email format").optional(),
     passwordRaw: z.string().min(8, "Password must be at least 8 characters long").optional(),
     firstName: z.string().min(1, "First name must not be empty").optional(),
     lastName: z.string().min(1, "Last name must not be empty").optional(),
+    role: z.enum(["ADMIN", "OPERATOR"]).optional(),
     roles: z.array(z.string()).optional()
 });
 

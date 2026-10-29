@@ -9,23 +9,7 @@ export class PrismaAuthRespository implements AuthRepository {
 
     async findByEmail(email: AuthUser["email"]): Promise<AuthUser | null> {
         const user = await this.db.user.findFirst({
-            where: { email, isActive: true },
-            include: {
-                userRoles: {
-                    select: {
-                        role: {
-                            select: {
-                                name: true,
-                                rolePermissions: {
-                                    select: {
-                                        permission: { select: { action: true } }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            where: { email, isActive: true }
         });
 
         if (!user) return null;
@@ -35,23 +19,7 @@ export class PrismaAuthRespository implements AuthRepository {
 
     async findById(id: AuthUser["id"]): Promise<AuthUser | null> {
         const user = await this.db.user.findUnique({
-            where: { id, isActive: true },
-            include: {
-                userRoles: {
-                    select: {
-                        role: {
-                            select: {
-                                name: true,
-                                rolePermissions: {
-                                    select: {
-                                        permission: { select: { action: true } }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            where: { id, isActive: true }
         });
 
         if (!user) return null;
@@ -64,13 +32,12 @@ export class PrismaAuthRespository implements AuthRepository {
         token: AuthSession['token'],
         expiresAt: Date
     ): Promise<void> {
-        await this.db.userSession.upsert({
-            where: { userId }, // Now userId is unique and can be used for upsert
-            update: {
-                token,
-                expiresAt
-            },
-            create: {
+        await this.db.userSession.deleteMany({
+            where: { userId }
+        });
+
+        await this.db.userSession.create({
+            data: {
                 userId,
                 token,
                 expiresAt
