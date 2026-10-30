@@ -118,8 +118,8 @@ export class PrismaProductsRepository implements ProductsRepository {
             }
 
             if (filters.lowStock) {
-                // If low stock requested, find products where currentStock <= minStock
-                // In PostgreSQL, we can filter using raw or we can filter in memory / check
+                const lowStockProductIds = await this.prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM products WHERE current_stock <= min_stock AND is_active = true;`;
+                where.id = { in: lowStockProductIds.map((p: { id: string }) => p.id) };
             }
 
             const [list, total] = await Promise.all([

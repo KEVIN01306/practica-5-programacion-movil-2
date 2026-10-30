@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../../../core/theme/cupertino_theme.dart';
 import '../../../../shared/widgets/cupertino_components.dart';
 import '../controllers/products_controller.dart';
@@ -79,9 +80,12 @@ class _ProductsListViewState extends State<ProductsListView> {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(CupertinoIcons.tag_badge_plus, size: 20),
+                Icon(CupertinoIcons.tag_fill, size: 20),
                 SizedBox(width: 8),
-                Text('+ Crear Nueva Categoría', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  '+ Crear Nueva Categoría',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
@@ -140,7 +144,9 @@ class _ProductsListViewState extends State<ProductsListView> {
           showCupertinoAlert(
             context: context,
             title: 'Error',
-            message: widget.controller.errorMessage ?? 'No se pudo desactivar el producto.',
+            message:
+                widget.controller.errorMessage ??
+                'No se pudo desactivar el producto.',
           );
         }
       }
@@ -159,7 +165,7 @@ class _ProductsListViewState extends State<ProductsListView> {
             CupertinoButton(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               onPressed: _openCreateCategoryModal,
-              child: const Icon(CupertinoIcons.tag_badge_plus, size: 24.0),
+              child: const Icon(CupertinoIcons.tag_fill, size: 24.0),
             ),
             CupertinoButton(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -192,49 +198,55 @@ class _ProductsListViewState extends State<ProductsListView> {
                 // Products List
                 Expanded(
                   child: isLoading && products.isEmpty
-                      ? const CupertinoLoadingState(message: 'Cargando catálogo...')
+                      ? const CupertinoLoadingState(
+                          message: 'Cargando catálogo...',
+                        )
                       : products.isEmpty
-                          ? CupertinoEmptyState(
-                              title: 'Sin productos encontrados',
-                              message: 'No hay productos que coincidan con los filtros aplicados.',
-                              icon: CupertinoIcons.search,
-                              action: CupertinoButton.filled(
-                                onPressed: widget.onCreateProduct,
-                                child: const Text('Registrar Nuevo Producto'),
-                              ),
-                            )
-                          : CustomScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              slivers: [
-                                CupertinoSliverRefreshControl(
-                                  onRefresh: () => widget.controller.loadProducts(refresh: true),
-                                ),
-                                SliverPadding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  sliver: SliverList(
-                                    delegate: SliverChildBuilderDelegate(
-                                      (context, index) {
-                                        final prod = products[index];
-                                        return ProductCard(
-                                          product: prod,
-                                          onTap: () => widget.onSelectProduct(prod),
-                                          onOptionsTap: () {
-                                            showProductOptionsSheet(
-                                              context: context,
-                                              product: prod,
-                                              onSelectDetail: () => widget.onSelectProduct(prod),
-                                              onEdit: () => widget.onEditProduct(prod),
-                                              onDeactivate: () => _confirmDeactivation(prod),
-                                            );
-                                          },
-                                        );
-                                      },
-                                      childCount: products.length,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                      ? CupertinoEmptyState(
+                          title: 'Sin productos encontrados',
+                          message: 'No hay productos que coincidan con los filtros aplicados.',
+                          icon: CupertinoIcons.search,
+                          action: CupertinoButton.filled(
+                            onPressed: widget.onCreateProduct,
+                            child: const Text('Registrar Nuevo Producto'),
+                          ),
+                        )
+                      : CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            CupertinoSliverRefreshControl(
+                              onRefresh: () =>
+                                  widget.controller.loadProducts(refresh: true),
                             ),
+                            SliverPadding(
+                              padding: const EdgeInsets.all(12.0),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  final prod = products[index];
+                                  return ProductCard(
+                                    product: prod,
+                                    onTap: () => widget.onSelectProduct(prod),
+                                    onOptionsTap: () {
+                                      showProductOptionsSheet(
+                                        context: context,
+                                        product: prod,
+                                        onSelectDetail: () =>
+                                            widget.onSelectProduct(prod),
+                                        onEdit: () =>
+                                            widget.onEditProduct(prod),
+                                        onDeactivate: () =>
+                                            _confirmDeactivation(prod),
+                                      );
+                                    },
+                                  );
+                                }, childCount: products.length),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ],
             );

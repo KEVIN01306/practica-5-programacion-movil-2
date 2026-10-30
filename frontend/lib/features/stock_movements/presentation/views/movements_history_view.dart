@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import '../../../../core/theme/cupertino_theme.dart';
 import '../../../../shared/widgets/cupertino_components.dart';
+import '../../../../shared/utils/csv_downloader.dart';
 import '../controllers/stock_movements_controller.dart';
 import '../../domain/stock_movement_model.dart';
 import '../widgets/movement_item_card.dart';
@@ -38,7 +39,12 @@ class _MovementsHistoryViewState extends State<MovementsHistoryView> {
               Navigator.pop(ctx);
               final csv = await widget.controller.generateInventoryCsv();
               if (mounted) {
-                _showCsvPreviewDialog('Inventario_General.csv', csv);
+                final filename = CsvDownloader.generateFileName('inventario_general');
+                await CsvDownloader.download(
+                  context: context,
+                  filename: filename,
+                  content: csv,
+                );
               }
             },
             child: const Row(
@@ -46,22 +52,39 @@ class _MovementsHistoryViewState extends State<MovementsHistoryView> {
               children: [
                 Icon(CupertinoIcons.cube_box, size: 20),
                 SizedBox(width: 8),
-                Text('Exportar Inventario Completo (Catálogo y Stock)'),
+                Flexible(
+                  child: Text(
+                    'Inventario General',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
           CupertinoActionSheetAction(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
               final csv = widget.controller.generateMovementsCsv();
-              _showCsvPreviewDialog('Historial_Movimientos.csv', csv);
+              if (mounted) {
+                final filename = CsvDownloader.generateFileName('historial_movimientos');
+                await CsvDownloader.download(
+                  context: context,
+                  filename: filename,
+                  content: csv,
+                );
+              }
             },
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(CupertinoIcons.clock_fill, size: 20),
                 SizedBox(width: 8),
-                Text('Exportar Historial de Movimientos Actual'),
+                Flexible(
+                  child: Text(
+                    'Historial de Movimientos',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -70,53 +93,6 @@ class _MovementsHistoryViewState extends State<MovementsHistoryView> {
           onPressed: () => Navigator.pop(ctx),
           child: const Text('Cancelar'),
         ),
-      ),
-    );
-  }
-
-  void _showCsvPreviewDialog(String filename, String csvContent) {
-    showCupertinoDialog<void>(
-      context: context,
-      builder: (ctx) => CupertinoAlertDialog(
-        title: Text('Archivo $filename'),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 10.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'El archivo CSV ha sido generado exitosamente según el estándar RFC 4180.',
-                style: TextStyle(fontSize: 12, color: CupertinoColors.secondaryLabel),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                height: 120,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemGrey6,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    csvContent,
-                    style: const TextStyle(
-                      fontFamily: 'Courier',
-                      fontSize: 10,
-                      color: CupertinoColors.label,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar'),
-          ),
-        ],
       ),
     );
   }

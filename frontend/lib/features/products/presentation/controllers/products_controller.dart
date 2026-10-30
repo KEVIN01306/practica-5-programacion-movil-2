@@ -81,7 +81,10 @@ class ProductsController extends ChangeNotifier {
       );
 
       _products = result.products;
-      _total = result.total;
+      if (_filterLowStock) {
+        _products = _products.where((p) => p.isLowStock).toList();
+      }
+      _total = _filterLowStock ? _products.length : result.total;
       _isLoading = false;
       notifyListeners();
     } catch (e) {

@@ -104,7 +104,7 @@ Prefijo global: `/api/v1`
 - `DELETE /api/v1/categories/:id`: Eliminación física de categoría (Solo `ADMIN`).
 
 ### 3.4. Productos (`/products`)
-- `GET /api/v1/products`: Listado paginado con filtros (`page`, `limit`, `search`, `categoryId`, `lowStock`).
+- `GET /api/v1/products`: Listado paginado con filtros (`page`, `limit`, `search`, `categoryId`, `lowStock` con filtrado en base de datos `current_stock <= min_stock`).
 - `GET /api/v1/products/generate-code`: Generación de código único garantizado anti-duplicados (ej. `PRD-X7K9M2`).
 - `GET /api/v1/products/code/:code`: Búsqueda de producto por código de barras / QR.
 - `GET /api/v1/products/:id`: Detalle de producto por ID.
@@ -143,11 +143,11 @@ Prefijo global: `/api/v1`
      - `features/products/` y `features/categories/`:
        - `domain/`: Modelos `Product`, `Category`, contratos `ProductsRepository` y `CategoriesRepository` (con soporte para `createCategory`).
        - `infrastructure/`: Implementaciones que conectan con `/products` y `/categories` (`createCategory`, `getCategories`). Soporte para `generateProductCode()` y `getProductLabel()`.
-       - `presentation/widgets/`: Separación modular en `product_card.dart`, `product_search_bar.dart`, `product_label_card.dart` (renderizado Code 128 + QR puro), `product_options_sheet.dart`, y `category_form_modal.dart` (modal Cupertino para creación reactiva de categorías con validaciones y feedback de carga/error).
+       - `presentation/widgets/`: Separación modular en `product_card.dart` (thumbnail de 48x48 con soporte para `imageUrl`, `ClipRRect`, loader y fallback a icono), `product_search_bar.dart`, `product_label_card.dart` (renderizado Code 128 + QR puro), `product_options_sheet.dart`, y `category_form_modal.dart` (modal Cupertino para creación reactiva de categorías con validaciones y feedback de carga/error).
        - `presentation/views/`:
          - `ProductsListView`: Catálogo modular con buscador, filtros por categoría y stock bajo, acceso directo a la creación de categoría por botón en barra de navegación (`CupertinoIcons.tag_badge_plus`) y dentro del picker de categorías, menú contextual con verificación de movimientos históricos para bloqueo de eliminación física.
          - `ProductFormView`: Formulario Cupertino con botón "Generar Automático" con `CupertinoIcons.sparkles`, validación de código duplicado, stock inicial con trazabilidad y edición con stock bloqueado.
-         - `ProductDetailView`: Ficha técnica, precios, renderizado de Code 128 y QR, exportación/impresión de etiqueta.
+         - `ProductDetailView`: Ficha técnica, precios, renderizado de Code 128 y QR, exportación/impresión de etiqueta, y visualización de `imageUrl` en contenedor 80x80 con `ClipRRect` y fallback automático.
      - `features/scanner/`:
        - `presentation/widgets/`: `scanner_viewfinder.dart`, `scanner_reticle_painter.dart`, `scanner_action_sheets.dart`.
        - `presentation/views/scanner_view.dart`: Visor de cámara real con plugin `mobile_scanner`, renderizado del stream de video en vivo, detección automática de códigos (Code 128 / QR), control de linterna física (`toggleTorch`), alternador de cámara (`switchCamera`), retícula de escaneo con láser animado, búsqueda instantánea por código con rutas a Detalle/Movimiento, diálogo para códigos inexistentes, fallback de entrada manual y pantalla de error con reintento ante permisos denegados. Permisos de cámara configurados en Android (`AndroidManifest.xml`), iOS (`Info.plist`) y macOS (`Info.plist` + `.entitlements`).
@@ -157,7 +157,9 @@ Prefijo global: `/api/v1`
        - `presentation/widgets/`: `movement_item_card.dart`, `realtime_projection_card.dart`, `movement_type_selector.dart`.
        - `presentation/views/`:
          - `RegisterMovementView`: Selector tipo segmento modular Cupertino, cálculo en tiempo real de stock proyectado, validación estricta de existencias (bloquea salidas mayores a stock actual), justificación obligatoria en ajustes y diálogo de confirmación atómica.
-         - `MovementsHistoryView`: Línea de tiempo cronológica modular de sólo lectura (inmutable), badges de color por tipo, filtros y exportación a CSV (RFC 4180).
+         - `MovementsHistoryView`: Línea de tiempo cronológica modular de sólo lectura (inmutable), badges de color por tipo, filtros y exportación directa a CSV con descarga automática (nombre `<YYYY-MM-DD_HH-mm-ss>_<tipo_reporte>.csv`) usando `CsvDownloader`, sin modal de copiado manual y con menú `CupertinoActionSheet` protegido contra desbordamiento.
+      - `shared/utils/csv_downloader.dart`:
+        - Módulo para descarga directa multiplataforma (Web vía HTML Blob + anchor y Desktop/Nativo vía `dart:io` a `Downloads`) y formateo de nombre con timestamp.
      - `main.dart`: Navegación principal en `CupertinoTabScaffold` con 5 pestañas (Inicio, Catálogo, Escáner, Movimientos, Reportes) y compuerta de autenticación.
 2. **Frontend React Legado (`frontend_/`)**:
    - Mantenido como referencia de UI y diseño para la migración hacia Flutter.
@@ -165,6 +167,18 @@ Prefijo global: `/api/v1`
 ---
 
 ## 5. Historial de Cambios (Changelog)
+- **2026-10-29 (Descarga Directa de CSV, Menú Adaptativo, Filtro de Stock Bajo e ImageUrl en Catálogo)**:
+  - **Exportación CSV en Reportes (`MovementsHistoryView`)**:
+    - Reemplazo del modal de copiado manual por descarga directa de archivos CSV.
+    - Generación de nombres de archivo dinámicos con fecha y hora: `<YYYY-MM-DD_HH-mm-ss>_<tipo_reporte>.csv` (`inventario_general` e `historial_movimientos`).
+    - Creación de utilitario modular multiplataforma `CsvDownloader` (`shared/utils/csv_downloader.dart`) con soporte para Web (HTML Blob + ancla de descarga) y Desktop/Nativo (`dart:io` a carpeta `Downloads`).
+    - Recorte de textos de acciones en `CupertinoActionSheetAction` y envoltura en `Flexible` con `TextOverflow.ellipsis` para erradicar cualquier desbordamiento de pantalla.
+    - Test unitario creado en `frontend/test/csv_downloader_test.dart` (100% pasando).
+  - **Filtro de Stock Bajo y Visualización de `imageUrl` en Catálogo**:
+    - Implementación en Backend (`PrismaProductsRepository`) del filtro `lowStock` en base de datos mediante consulta SQL raw de IDs con `current_stock <= min_stock AND is_active = true`.
+    - Garantía de filtrado estricto en frontend dentro de `ProductsController` ante el toggle reactivo de Stock Bajo.
+    - Soporte completo de renderizado para `product.imageUrl` tanto en las tarjetas del catálogo (`ProductCard`, 48x48 con `ClipRRect(10.0)`) como en el detalle del producto (`ProductDetailView`, 80x80 con `ClipRRect(16.0)`), con loaders de actividad e iconos de fallback automáticos.
+  - Verificación exitosa por el agente Tester: `npx tsc --noEmit` (0 errores), `flutter analyze` (0 errores) y pruebas unitarias passing.
 - **2026-10-29 (Creación de Categoría en Catálogo y Backend)**:
   - Extensión de permisos en Backend para el endpoint `POST /api/v1/categories`, permitiendo acceso tanto a `ADMIN` como a `OPERATOR`.
   - Integración en `CategoriesRepository` y `CategoriesRepositoryImpl` de Flutter del método `createCategory({required String name, String? description})`.

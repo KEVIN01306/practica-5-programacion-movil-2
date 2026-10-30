@@ -16,6 +16,54 @@ class ProductDetailView extends StatelessWidget {
     required this.onRegisterMovement,
   });
 
+  Widget _buildProductImage() {
+    final imageUrl = product.imageUrl?.trim();
+    final fallbackIcon = Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey6,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CupertinoColors.systemGrey4),
+      ),
+      child: const Icon(
+        CupertinoIcons.cube_box_fill,
+        color: AppCupertinoTheme.primaryColor,
+        size: 40,
+      ),
+    );
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16.0),
+        child: SizedBox(
+          width: 80,
+          height: 80,
+          child: Image.network(
+            imageUrl,
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: 80,
+                height: 80,
+                color: CupertinoColors.systemGrey6,
+                child: const Center(
+                  child: CupertinoActivityIndicator(),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => fallbackIcon,
+          ),
+        ),
+      );
+    }
+
+    return fallbackIcon;
+  }
+
   void _showExportLabelSheet(BuildContext context) {
     showCupertinoModalPopup<void>(
       context: context,
@@ -92,20 +140,7 @@ class ProductDetailView extends StatelessWidget {
               CupertinoCard(
                 child: Column(
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemGrey6,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: CupertinoColors.systemGrey4),
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.cube_box_fill,
-                        color: AppCupertinoTheme.primaryColor,
-                        size: 40,
-                      ),
-                    ),
+                    _buildProductImage(),
                     const SizedBox(height: 12),
                     Text(
                       product.name,

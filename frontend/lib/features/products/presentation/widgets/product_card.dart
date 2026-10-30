@@ -15,6 +15,55 @@ class ProductCard extends StatelessWidget {
     required this.onOptionsTap,
   });
 
+  Widget _buildFallbackIcon() {
+    return Container(
+      width: 48.0,
+      height: 48.0,
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey6,
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(color: CupertinoColors.systemGrey5),
+      ),
+      child: const Icon(
+        CupertinoIcons.cube_box_fill,
+        color: AppCupertinoTheme.primaryColor,
+        size: 24.0,
+      ),
+    );
+  }
+
+  Widget _buildThumbnail() {
+    final imageUrl = product.imageUrl?.trim();
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10.0),
+        child: SizedBox(
+          width: 48.0,
+          height: 48.0,
+          child: Image.network(
+            imageUrl,
+            width: 48.0,
+            height: 48.0,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: 48.0,
+                height: 48.0,
+                color: CupertinoColors.systemGrey6,
+                child: const Center(
+                  child: CupertinoActivityIndicator(radius: 8.0),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => _buildFallbackIcon(),
+          ),
+        ),
+      );
+    }
+    return _buildFallbackIcon();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -26,20 +75,7 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Thumbnail / Icon
-            Container(
-              width: 48.0,
-              height: 48.0,
-              decoration: BoxDecoration(
-                color: CupertinoColors.systemGrey6,
-                borderRadius: BorderRadius.circular(10.0),
-                border: Border.all(color: CupertinoColors.systemGrey5),
-              ),
-              child: const Icon(
-                CupertinoIcons.cube_box_fill,
-                color: AppCupertinoTheme.primaryColor,
-                size: 24.0,
-              ),
-            ),
+            _buildThumbnail(),
             const SizedBox(width: 12.0),
 
             // Product details
