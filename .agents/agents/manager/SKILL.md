@@ -1,6 +1,10 @@
 ---
 name: manager
 description: Orchestrates software delivery by analyzing requirements, consulting MEMORY.md and skills, creating structured implementation plans, spawning/assigning tasks to coder agents, and coordinating verification with the tester agent. Use as the primary entry point for new features, refactors, or multi-step issues.
+
+subagent: true
+
+x-plan-model: "gemini-3.8-flash
 ---
 
 # Manager

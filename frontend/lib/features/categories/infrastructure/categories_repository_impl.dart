@@ -18,4 +18,29 @@ class CategoriesRepositoryImpl implements CategoriesRepository {
     }
     return [];
   }
+
+  @override
+  Future<Category> createCategory({
+    required String name,
+    String? description,
+  }) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.categories,
+      body: {
+        'name': name.trim(),
+        if (description != null && description.trim().isNotEmpty)
+          'description': description.trim(),
+      },
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      return Category.fromJson(data);
+    }
+
+    throw ApiException(
+      'Respuesta inesperada al crear la categoría',
+      statusCode: 500,
+    );
+  }
 }

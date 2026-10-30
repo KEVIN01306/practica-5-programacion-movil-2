@@ -99,7 +99,7 @@ Prefijo global: `/api/v1`
 ### 3.3. Categorías (`/categories`)
 - `GET /api/v1/categories`: Listado completo de categorías ordenadas por nombre.
 - `GET /api/v1/categories/:id`: Detalle de una categoría por ID.
-- `POST /api/v1/categories`: Creación de categoría (Solo `ADMIN`).
+- `POST /api/v1/categories`: Creación de categoría (`ADMIN` y `OPERATOR`).
 - `PUT /api/v1/categories/:id`: Modificación de categoría (Solo `ADMIN`).
 - `DELETE /api/v1/categories/:id`: Eliminación física de categoría (Solo `ADMIN`).
 
@@ -141,16 +141,16 @@ Prefijo global: `/api/v1`
        - `presentation/widgets/`: Separación modular en `dashboard_header.dart` (saludo + badge de rol), `dashboard_kpi_cards.dart` (2 columnas + valoración total), `quick_actions_grid.dart` (Escanear, Movimiento, Producto con tarjetas e iconos circulares), `low_stock_section.dart` (estado de stock con escudo verde "Al día" o lista de alertas).
        - `presentation/views/dashboard_view.dart`: Vista orquestadora liviana con pull-to-refresh y logout nativo.
      - `features/products/` y `features/categories/`:
-       - `domain/`: Modelos `Product`, `Category`, contratos `ProductsRepository` y `CategoriesRepository`.
-       - `infrastructure/`: Implementaciones que conectan con `/products` y `/categories`. Soporte para `generateProductCode()` y `getProductLabel()`.
-       - `presentation/widgets/`: Separación modular en `product_card.dart`, `product_search_bar.dart`, `product_label_card.dart` (renderizado Code 128 + QR puro), `product_options_sheet.dart`.
+       - `domain/`: Modelos `Product`, `Category`, contratos `ProductsRepository` y `CategoriesRepository` (con soporte para `createCategory`).
+       - `infrastructure/`: Implementaciones que conectan con `/products` y `/categories` (`createCategory`, `getCategories`). Soporte para `generateProductCode()` y `getProductLabel()`.
+       - `presentation/widgets/`: Separación modular en `product_card.dart`, `product_search_bar.dart`, `product_label_card.dart` (renderizado Code 128 + QR puro), `product_options_sheet.dart`, y `category_form_modal.dart` (modal Cupertino para creación reactiva de categorías con validaciones y feedback de carga/error).
        - `presentation/views/`:
-         - `ProductsListView`: Catálogo modular con buscador, filtros por categoría y stock bajo, menú contextual con verificación de movimientos históricos para bloqueo de eliminación física.
+         - `ProductsListView`: Catálogo modular con buscador, filtros por categoría y stock bajo, acceso directo a la creación de categoría por botón en barra de navegación (`CupertinoIcons.tag_badge_plus`) y dentro del picker de categorías, menú contextual con verificación de movimientos históricos para bloqueo de eliminación física.
          - `ProductFormView`: Formulario Cupertino con botón "Generar Automático" con `CupertinoIcons.sparkles`, validación de código duplicado, stock inicial con trazabilidad y edición con stock bloqueado.
          - `ProductDetailView`: Ficha técnica, precios, renderizado de Code 128 y QR, exportación/impresión de etiqueta.
      - `features/scanner/`:
        - `presentation/widgets/`: `scanner_viewfinder.dart`, `scanner_reticle_painter.dart`, `scanner_action_sheets.dart`.
-       - `presentation/views/scanner_view.dart`: Visor de cámara Cupertino con retícula de escaneo, animación de línea láser, alternador de linterna, búsqueda instantánea por código con rutas a Detalle/Movimiento, diálogo para códigos inexistentes y fallback de entrada manual.
+       - `presentation/views/scanner_view.dart`: Visor de cámara real con plugin `mobile_scanner`, renderizado del stream de video en vivo, detección automática de códigos (Code 128 / QR), control de linterna física (`toggleTorch`), alternador de cámara (`switchCamera`), retícula de escaneo con láser animado, búsqueda instantánea por código con rutas a Detalle/Movimiento, diálogo para códigos inexistentes, fallback de entrada manual y pantalla de error con reintento ante permisos denegados. Permisos de cámara configurados en Android (`AndroidManifest.xml`), iOS (`Info.plist`) y macOS (`Info.plist` + `.entitlements`).
      - `features/stock_movements/`:
        - `domain/`: Modelo `StockMovement`, enum `MovementType` (`ENTRY`, `EXIT`, `ADJUST`), contrato `StockMovementsRepository`.
        - `infrastructure/`: `StockMovementsRepositoryImpl`.
@@ -165,6 +165,17 @@ Prefijo global: `/api/v1`
 ---
 
 ## 5. Historial de Cambios (Changelog)
+- **2026-10-29 (Creación de Categoría en Catálogo y Backend)**:
+  - Extensión de permisos en Backend para el endpoint `POST /api/v1/categories`, permitiendo acceso tanto a `ADMIN` como a `OPERATOR`.
+  - Integración en `CategoriesRepository` y `CategoriesRepositoryImpl` de Flutter del método `createCategory({required String name, String? description})`.
+  - Creación del widget modular Cupertino `CategoryFormModal` con campos de nombre, descripción, validación reactiva, loader y manejo de excepciones del API.
+  - Integración en `ProductsListView` de botón de acceso a creación de categorías en la barra de navegación superior (`CupertinoIcons.tag_badge_plus`) y en la hoja de filtros de categoría.
+  - Verificación exitosa por el agente Tester: `npx tsc --noEmit` (0 errores) y auditoría de Clean Architecture aprobada.
+- **2026-10-29**:
+  - Reemplazo del simulador estático de cámara en el módulo de escáner (`ScannerView`) por integración de cámara en vivo y lectura de códigos de barras (Code 128) y QR mediante `mobile_scanner`.
+  - Configuración de permisos de hardware de cámara en Android (`android.permission.CAMERA`), iOS (`NSCameraUsageDescription`), y macOS (`com.apple.security.device.camera` + `NSCameraUsageDescription`).
+  - Sincronización de controles de hardware en la interfaz Cupertino: alternancia de linterna física (`toggleTorch`), cambio de cámara trasera/frontal (`switchCamera`) y pausa/reanudación controlada del flujo al abrir las hojas de acción modal de producto.
+  - Verificación exitosa de QA con `flutter analyze` (0 errores) y `npx tsc --noEmit` en backend (0 errores).
 - **2026-10-28**:
   - Implementación en Backend de generación de códigos únicos de producto sin duplicados (`GET /api/v1/products/generate-code`) y servicio de etiquetas (`GET /api/v1/products/:id/label`).
   - Restricción estricta de codificación en etiquetas: el código identifica al producto; las existencias se consultan en base de datos; la cantidad disponible NO se codifica en el QR.

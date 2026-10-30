@@ -1,6 +1,11 @@
 ---
 name: tester
 description: Independently verifies code changes made by the coder agent against acceptance criteria, architecture constraints, type safety, build checks, and runtime/test behavior. Can approve work or send it back to the coder for fixes.
+
+
+subagent: true
+
+x-plan-model: "gemini-3.8-flash
 ---
 
 # Tester

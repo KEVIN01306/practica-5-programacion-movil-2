@@ -1,6 +1,10 @@
 ---
 name: coder
 description: Works on exactly one structured task or GitHub issue at a time, in triage or implement mode, following project skills and providing command output as proof. Use when asked by the manager or user to investigate or implement a specific task/issue (#123).
+
+subagent: true
+
+x-plan-model: "gemini-3.8-flash"
 ---
 
 # Coder

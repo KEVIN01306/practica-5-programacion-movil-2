@@ -1,13 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import '../../../products/domain/product_model.dart';
 
-void showScannedProductSheet({
+Future<void> showScannedProductSheet({
   required BuildContext context,
   required Product product,
   required VoidCallback onSelectMovement,
   required VoidCallback onSelectDetail,
-}) {
-  showCupertinoModalPopup<void>(
+  VoidCallback? onDismiss,
+}) async {
+  await showCupertinoModalPopup<void>(
     context: context,
     builder: (ctx) => CupertinoActionSheet(
       title: const Text('Producto Identificado'),
@@ -52,15 +53,17 @@ void showScannedProductSheet({
       ),
     ),
   );
+  onDismiss?.call();
 }
 
-void showProductNotFoundDialog({
+Future<void> showProductNotFoundDialog({
   required BuildContext context,
   required String code,
   required VoidCallback onRetry,
   required VoidCallback onRegisterNew,
-}) {
-  showCupertinoDialog<void>(
+  VoidCallback? onDismiss,
+}) async {
+  await showCupertinoDialog<void>(
     context: context,
     builder: (ctx) => CupertinoAlertDialog(
       title: const Text('Código No Registrado'),
@@ -89,15 +92,17 @@ void showProductNotFoundDialog({
       ],
     ),
   );
+  onDismiss?.call();
 }
 
-void showManualCodeInputDialog({
+Future<void> showManualCodeInputDialog({
   required BuildContext context,
   required TextEditingController controller,
   required ValueChanged<String> onSubmit,
-}) {
+  VoidCallback? onDismiss,
+}) async {
   controller.clear();
-  showCupertinoDialog<void>(
+  await showCupertinoDialog<void>(
     context: context,
     builder: (ctx) => CupertinoAlertDialog(
       title: const Text('Ingreso Manual de Código'),
@@ -143,4 +148,5 @@ void showManualCodeInputDialog({
       ],
     ),
   );
+  onDismiss?.call();
 }

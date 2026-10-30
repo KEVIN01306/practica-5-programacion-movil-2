@@ -6,6 +6,7 @@ import '../../domain/product_model.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_options_sheet.dart';
 import '../widgets/product_search_bar.dart';
+import '../../../categories/presentation/widgets/category_form_modal.dart';
 
 class ProductsListView extends StatefulWidget {
   final ProductsController controller;
@@ -42,15 +43,48 @@ class _ProductsListViewState extends State<ProductsListView> {
     super.dispose();
   }
 
+  Future<void> _openCreateCategoryModal() async {
+    final newCategory = await showCategoryFormModal(
+      context: context,
+      onSubmit: (name, description) async {
+        return await widget.controller.createCategory(
+          name: name,
+          description: description,
+        );
+      },
+    );
+
+    if (newCategory != null && mounted) {
+      showCupertinoAlert(
+        context: context,
+        title: 'Categoría Creada',
+        message: 'La categoría "${newCategory.name}" se creó correctamente.',
+      );
+    }
+  }
+
   void _showCategoryPicker() {
     final categories = widget.controller.categories;
-    if (categories.isEmpty) return;
 
     showCupertinoModalPopup<void>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
         title: const Text('Filtrar por Categoría'),
         actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openCreateCategoryModal();
+            },
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.tag_badge_plus, size: 20),
+                SizedBox(width: 8),
+                Text('+ Crear Nueva Categoría', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
           CupertinoActionSheetAction(
             isDefaultAction: widget.controller.selectedCategoryId == null,
             onPressed: () {
@@ -119,10 +153,20 @@ class _ProductsListViewState extends State<ProductsListView> {
       backgroundColor: AppCupertinoTheme.scaffoldBackground,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('Catálogo de Productos'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: widget.onCreateProduct,
-          child: const Icon(CupertinoIcons.plus_circle_fill, size: 26.0),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              onPressed: _openCreateCategoryModal,
+              child: const Icon(CupertinoIcons.tag_badge_plus, size: 24.0),
+            ),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              onPressed: widget.onCreateProduct,
+              child: const Icon(CupertinoIcons.plus_circle_fill, size: 26.0),
+            ),
+          ],
         ),
       ),
       child: SafeArea(

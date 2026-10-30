@@ -21,7 +21,7 @@ router.get(
 
 router.post(
     "/",
-    authMiddleware.checkRole(["ADMIN"]),
+    authMiddleware.checkRole(["ADMIN", "OPERATOR"]),
     validatedMiddleware.validateBody(CreateCategorySchema),
     categoriesController.create
 );

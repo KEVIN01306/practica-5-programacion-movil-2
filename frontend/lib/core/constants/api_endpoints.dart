@@ -4,10 +4,10 @@ class ApiEndpoints {
   static String get baseUrl {
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2:7000/api';
+        return 'https://practica-5-programacion-movil-2.onrender.com/api';
       }
     } catch (_) {}
-    return 'http://localhost:7000/api';
+    return 'https://practica-5-programacion-movil-2.onrender.com/api';
   }
 
   // Auth

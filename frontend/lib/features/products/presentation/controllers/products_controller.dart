@@ -48,6 +48,24 @@ class ProductsController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<Category?> createCategory({
+    required String name,
+    String? description,
+  }) async {
+    try {
+      final category = await _categoriesRepository.createCategory(
+        name: name,
+        description: description,
+      );
+      await loadCategories();
+      return category;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<void> loadProducts({bool refresh = false}) async {
     _isLoading = true;
     _errorMessage = null;
