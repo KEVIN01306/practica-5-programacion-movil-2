@@ -167,6 +167,10 @@ Prefijo global: `/api/v1`
 ---
 
 ## 5. Historial de Cambios (Changelog)
+- **2026-10-29 (Manual de Usuario Oficial para Exportación a Word/PDF)**:
+  - Creación de `docs/MANUAL_DE_USUARIO.md` estructurado específicamente para conversión limpia a Microsoft Word y PDF.
+  - Incluye: portada formal, índice, permisos de hardware (cámara y almacenamiento en iOS/Android/macOS/Web), gestión de roles (ADMIN vs OPERATOR), dashboard con KPIs y valoración económica, catálogo y categorías rápidas, escaneo óptico y generación de etiquetas Code 128 / QR (con la regla estricta de no codificar existencias), control de movimientos (entradas, salidas con bloqueo de sobregiro, ajustes con justificación obligatoria), kárdex cronológico y exportación directa a CSV con timestamp.
+  - Tabla completa de errores comunes y soluciones paso a paso.
 - **2026-10-29 (Documentación Técnica Completa y Guía de Instalación/Ejecución)**:
   - **README.md en Raíz**: Creado con instrucciones completas de instalación, configuración de `.env`, comandos de Prisma (`db:migrate`, `db:seed`, `db:studio`), credenciales por defecto (`admin@inventario.com`, `operador@inventario.com`), ejecución de backend y frontend en múltiples plataformas (Web, macOS, Android, iOS), y comandos de prueba.
   - **Configuración de Entorno**: Creado `backend/.env.example` con comentarios detallados de variables para PostgreSQL, JWT y puertos.

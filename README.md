@@ -245,9 +245,13 @@ flutter test
 
 ## 7. Documentación Técnica Complementaria
 
-Para profundizar en el diseño interno y contratos del sistema, consulta los siguientes documentos en la carpeta [`docs/`](./docs/):
+Para profundizar en el diseño interno y manuales operativos del sistema, consulta los siguientes documentos en la carpeta [`docs/`](./docs/):
 
-1. 🏛️ **[Arquitectura Técnica Feature + Domain (`docs/ARCHITECTURE.md`)](./docs/ARCHITECTURE.md)**:
+1. 📖 **[Manual de Usuario Oficial (`docs/MANUAL_DE_USUARIO.md`)](./docs/MANUAL_DE_USUARIO.md)**:
+   - Manual completo para Operadores y Administradores listo para exportar a Word y PDF.
+   - Guía de permisos, escáner óptico, kárdex, exportación CSV, generación de etiquetas y solución de errores comunes.
+
+2. 🏛️ **[Arquitectura Técnica Feature + Domain (`docs/ARCHITECTURE.md`)](./docs/ARCHITECTURE.md)**:
    - Explicación detallada de las 4 capas de Clean Architecture.
    - Modularización por Features en Backend y Frontend Flutter.
    - Inyección de dependencias, desacoplamiento de componentes y diagramas de secuencia.
