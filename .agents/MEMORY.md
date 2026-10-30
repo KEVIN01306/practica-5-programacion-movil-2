@@ -167,6 +167,14 @@ Prefijo global: `/api/v1`
 ---
 
 ## 5. Historial de Cambios (Changelog)
+- **2026-10-29 (Documentación Técnica Completa y Guía de Instalación/Ejecución)**:
+  - **README.md en Raíz**: Creado con instrucciones completas de instalación, configuración de `.env`, comandos de Prisma (`db:migrate`, `db:seed`, `db:studio`), credenciales por defecto (`admin@inventario.com`, `operador@inventario.com`), ejecución de backend y frontend en múltiples plataformas (Web, macOS, Android, iOS), y comandos de prueba.
+  - **Configuración de Entorno**: Creado `backend/.env.example` con comentarios detallados de variables para PostgreSQL, JWT y puertos.
+  - **Documentación Técnica en `docs/`**:
+    - `docs/ARCHITECTURE.md`: Arquitectura Clean Architecture + Feature-Driven / Domain-Driven para Backend y Frontend, 4 capas, inyección de dependencias modular, desacoplamiento de vistas/widgets, diagramas Mermaid de autenticación, escáner, movimientos atómicos y exportación CSV.
+    - `docs/DATA_MODEL.md`: Modelo de datos exhaustivo, diagrama ERD en Mermaid, especificación de tablas `users`, `user_sessions`, `categories`, `products`, `stock_movements`, tipos enum `Role` y `MovementType`, índices, soft-delete e integridad referencial.
+    - `docs/API_REFERENCE.md`: Catálogo completo de endpoints REST `/api/v1/`, ejemplos de payload, query params, respuestas estandarizadas `ResponseHttp` y control de acceso por roles.
+    - `docs/README.md`: Índice de navegación de la documentación técnica.
 - **2026-10-29 (Descarga Directa de CSV, Menú Adaptativo, Filtro de Stock Bajo e ImageUrl en Catálogo)**:
   - **Exportación CSV en Reportes (`MovementsHistoryView`)**:
     - Reemplazo del modal de copiado manual por descarga directa de archivos CSV.
