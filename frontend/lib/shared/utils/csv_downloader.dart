@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import '../widgets/cupertino_components.dart';
 import 'csv_downloader_platform_stub.dart'
     if (dart.library.html) 'csv_downloader_platform_web.dart'
@@ -17,33 +21,89 @@ class CsvDownloader {
     return '$year-$month-${day}_$hour-$minute-${second}_$reportType.csv';
   }
 
-  /// Descarga directamente el archivo CSV en Web o guarda en disco en plataformas nativas/desktop.
-  /// Muestra una alerta Cupertino (`showCupertinoAlert`) indicando que el archivo se descargó exitosamente.
+  /// Extrae el nombre simple de la carpeta de destino sin exponer la ruta del sistema
+  static String extractFolderName(Uri uri) {
+    try {
+      if (!kIsWeb && uri.scheme == 'file') {
+        final filePath = uri.toFilePath();
+        final parentDir = File(filePath).parent;
+        final segments = parentDir.path
+            .split(Platform.pathSeparator)
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (segments.isNotEmpty) {
+          final rawName = segments.last;
+          if (rawName.toLowerCase() == 'download' || rawName.toLowerCase() == 'downloads') {
+            return 'Descargas';
+          }
+          if (rawName.toLowerCase() == 'documents' || rawName.toLowerCase() == 'documentos') {
+            return 'Documentos';
+          }
+          return rawName;
+        }
+      } else if (uri.pathSegments.isNotEmpty) {
+        final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+        if (segments.length >= 2) {
+          final rawName = Uri.decodeComponent(segments[segments.length - 2]);
+          if (rawName.toLowerCase() == 'download' || rawName.toLowerCase() == 'downloads') {
+            return 'Descargas';
+          }
+          return rawName;
+        }
+      }
+    } catch (_) {}
+    return 'seleccionada';
+  }
+
+  /// Permite al usuario seleccionar mediante FilePicker la carpeta y ubicación donde desea guardar el CSV.
+  /// Muestra únicamente el nombre de la carpeta seleccionada sin exponer la ruta técnica del sistema.
   static Future<void> download({
     required BuildContext context,
     required String filename,
     required String content,
   }) async {
     try {
-      final savedPath = await saveCsvPlatform(filename: filename, content: content);
+      final bytes = Uint8List.fromList(utf8.encode(content));
+      final savedUri = await FilePicker.saveFile(
+        dialogTitle: 'Seleccionar ubicación para guardar el reporte CSV',
+        fileName: filename,
+        bytes: bytes,
+        mimeType: 'text/csv',
+      );
+
+      // Si el usuario canceló el selector de archivos, terminamos sin error
+      if (savedUri == null) {
+        return;
+      }
+
       if (!context.mounted) return;
 
-      final message = (savedPath != null && savedPath != filename)
-          ? 'El archivo "$filename" se ha descargado exitosamente en:\n$savedPath'
-          : 'El archivo "$filename" se ha descargado exitosamente.';
+      final folderName = extractFolderName(savedUri);
 
       await showCupertinoAlert(
         context: context,
-        title: 'Descarga Exitosa',
-        message: message,
+        title: 'Reporte Exportado',
+        message: 'Se exportó el CSV con éxito en la carpeta $folderName.',
       );
-    } catch (e) {
-      if (!context.mounted) return;
-      await showCupertinoAlert(
-        context: context,
-        title: 'Error al Exportar',
-        message: 'No se pudo descargar el archivo "$filename": $e',
-      );
+    } catch (_) {
+      // Fallback a guardado directo en carpeta pública de descargas
+      try {
+        await saveCsvPlatform(filename: filename, content: content);
+        if (!context.mounted) return;
+
+        await showCupertinoAlert(
+          context: context,
+          title: 'Reporte Exportado',
+          message: 'Se exportó el CSV con éxito en la carpeta Descargas.',
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        await showCupertinoAlert(
+          context: context,
+          title: 'Error al Exportar',
+          message: 'No se pudo exportar el archivo CSV: $e',
+        );
+      }
     }
   }
 }

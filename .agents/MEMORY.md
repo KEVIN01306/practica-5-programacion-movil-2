@@ -159,7 +159,11 @@ Prefijo global: `/api/v1`
          - `RegisterMovementView`: Selector tipo segmento modular Cupertino, cálculo en tiempo real de stock proyectado, validación estricta de existencias (bloquea salidas mayores a stock actual), justificación obligatoria en ajustes y diálogo de confirmación atómica.
          - `MovementsHistoryView`: Línea de tiempo cronológica modular de sólo lectura (inmutable), badges de color por tipo, filtros y exportación directa a CSV con descarga automática (nombre `<YYYY-MM-DD_HH-mm-ss>_<tipo_reporte>.csv`) usando `CsvDownloader`, sin modal de copiado manual y con menú `CupertinoActionSheet` protegido contra desbordamiento.
       - `shared/utils/csv_downloader.dart`:
-        - Módulo para descarga directa multiplataforma (Web vía HTML Blob + anchor y Desktop/Nativo vía `dart:io` a `Downloads`) y formateo de nombre con timestamp.
+        - Módulo para descarga y selección interactiva de carpeta destino mediante `file_picker: ^13.3.0`. Permite al usuario elegir dónde guardar sus reportes CSV en cualquier plataforma, extrayendo el nombre simple de la carpeta seleccionada (ej. `"Descargas"`, `"Documentos"`, etc.) y mostrando el mensaje conciso `"Se exportó el CSV con éxito en la carpeta <nombre>."` sin rutas técnicas.
+      - `shared/utils/file_downloader.dart`:
+        - Utilitario multiplataforma universal para descarga y persistencia de binarios (imágenes PNG) y texto (CSV) con integración de `path_provider: ^2.1.2` y `gal: ^2.3.3`. Soporte para almacenamiento dual: en Galería pública de fotos (Álbum "Inventario") y en la carpeta pública de descargas (`/storage/emulated/0/Download` en Android, `Downloads` en Desktop y Web Blob download).
+      - `shared/utils/label_image_generator.dart`:
+        - Generador nativo en canvas (`dart:ui.PictureRecorder` + `Canvas`) de imágenes PNG de alta resolución para rotulación y etiquetas con diseño formal: nombre del producto arriba, código de barras (Code 128) y/o código QR al centro, y código de producto al pie.
      - `main.dart`: Navegación principal en `CupertinoTabScaffold` con 5 pestañas (Inicio, Catálogo, Escáner, Movimientos, Reportes) y compuerta de autenticación.
 2. **Frontend React Legado (`frontend_/`)**:
    - Mantenido como referencia de UI y diseño para la migración hacia Flutter.
@@ -167,6 +171,32 @@ Prefijo global: `/api/v1`
 ---
 
 ## 5. Historial de Cambios (Changelog)
+- **2026-10-30 (Descarga Real de Imágenes en Carpeta Pública de Descargas y Galería con `gal: ^2.3.3` y `path_provider`)**:
+  - **Integración del plugin `gal: ^2.3.3`**:
+    - Guardado nativo de las imágenes en la galería de fotos y MediaStore del dispositivo bajo el álbum público `"Inventario"`.
+    - Configuración de permisos en `AndroidManifest.xml` (`WRITE_EXTERNAL_STORAGE` y `READ_EXTERNAL_STORAGE`) y en `Info.plist` de iOS (`NSPhotoLibraryAddUsageDescription` y `NSPhotoLibraryUsageDescription`).
+  - **Persistencia en la Carpeta Pública de Descargas**:
+    - Guardado físico simultáneo en la carpeta pública de descargas (`/storage/emulated/0/Download` en Android y carpeta `Downloads` en Desktop y Web).
+  - **Opciones de Exportación en Detalle de Producto (`ProductDetailView`)**:
+    - Menú de exportación interactivo con: **"Exportar QR"**, **"Exportar Código de Barras"** y **"Exportar Ambos (QR y Código de Barras)"**.
+    - Descarga real de la imagen generada en formato PNG invocando `FileDownloader.downloadImage`.
+  - **Generación de Etiquetas con Formato de Rotulación (`LabelImageGenerator`)**:
+    - Renderizado puro y determinístico en canvas (`dart:ui.PictureRecorder` + `Canvas`) con exportación de bytes PNG (`ui.ImageByteFormat.png`).
+    - Estructura visual de tarjeta formal:
+      - **Arriba**: Nombre del producto (`product.name`) centrado con tipografía de alto contraste.
+      - **Al Centro**: Código QR puro (21x21 estándar), Código de Barras (Code 128 Type B) o ambos combinados.
+      - **Abajo**: Código único del producto (`product.code`) en tipografía monospace/Courier con espacio entre caracteres y subtítulo de identificación.
+  - **Selección de Carpeta con `file_picker: ^13.3.0` para Reportes CSV**:
+    - Al exportar reportes CSV (Inventario General o Movimientos), se abre el diálogo nativo del sistema para que el usuario escoja la carpeta de destino y el nombre.
+    - Soporte multiplataforma (Android SAF, iOS Document Picker, macOS/Windows/Linux Save Dialog y Web).
+    - Extracción automática del nombre de la carpeta de destino (`CsvDownloader.extractFolderName`) para confirmar: `"Se exportó el CSV con éxito en la carpeta <carpeta>."` sin exponer rutas absolutas.
+  - **Mensajes de Confirmación Concisos (Sin Rutas de Archivos)**:
+    - En exportación de imágenes: la alerta informa de forma clara y limpia `"Se guardó exitosamente en el álbum \"Inventario\"."`.
+    - En exportación de reportes CSV: la alerta confirma `"Se exportó el CSV con éxito en la carpeta <nombre>."`, omitiendo rutas absolutas del sistema operativo.
+  - **Auditoría de Calidad y Pruebas**:
+    - Pruebas unitarias en `frontend/test/file_downloader_test.dart`, `frontend/test/csv_downloader_test.dart` y `frontend/test/label_image_generator_test.dart`.
+    - 100% de tests pasando (11/11).
+    - `flutter analyze` ejecutado con 0 errores y `npx tsc --noEmit` en backend con 0 errores.
 - **2026-10-29 (Manual de Usuario Oficial para Exportación a Word/PDF)**:
   - Creación de `docs/MANUAL_DE_USUARIO.md` estructurado específicamente para conversión limpia a Microsoft Word y PDF.
   - Incluye: portada formal, índice, permisos de hardware (cámara y almacenamiento en iOS/Android/macOS/Web), gestión de roles (ADMIN vs OPERATOR), dashboard con KPIs y valoración económica, catálogo y categorías rápidas, escaneo óptico y generación de etiquetas Code 128 / QR (con la regla estricta de no codificar existencias), control de movimientos (entradas, salidas con bloqueo de sobregiro, ajustes con justificación obligatoria), kárdex cronológico y exportación directa a CSV con timestamp.

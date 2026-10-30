@@ -1,5 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/cupertino_theme.dart';
+import '../../../../shared/utils/file_downloader.dart';
+import '../../../../shared/utils/label_image_generator.dart';
 import '../../../../shared/widgets/cupertino_components.dart';
 import '../../domain/product_model.dart';
 import '../widgets/product_label_card.dart';
@@ -64,41 +67,115 @@ class ProductDetailView extends StatelessWidget {
     return fallbackIcon;
   }
 
+  Future<void> _handleExportImage(
+    BuildContext context,
+    LabelExportType type,
+  ) async {
+    final typeLabel = switch (type) {
+      LabelExportType.qr => 'QR',
+      LabelExportType.barcode => 'codigo_barras',
+      LabelExportType.both => 'ambos',
+    };
+
+    final titleLabel = switch (type) {
+      LabelExportType.qr => 'Código QR',
+      LabelExportType.barcode => 'Código de Barras',
+      LabelExportType.both => 'Etiqueta Completa (QR y Barras)',
+    };
+
+    try {
+      final bytes = await LabelImageGenerator.generateLabelImage(
+        productName: product.name,
+        productCode: product.code,
+        type: type,
+      );
+
+      final prefix = '${FileDownloader.sanitizeFileName(product.name)}_${product.code}_$typeLabel';
+      final filename = FileDownloader.generateTimestampedName(
+        prefix: prefix,
+        extension: 'png',
+      );
+
+      if (!context.mounted) return;
+
+      await FileDownloader.downloadImage(
+        context: context,
+        filename: filename,
+        bytes: bytes,
+        title: '$titleLabel Guardado',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await showCupertinoAlert(
+        context: context,
+        title: 'Error al Generar Imagen',
+        message: 'No fue posible exportar la imagen de la etiqueta: $e',
+      );
+    }
+  }
+
   void _showExportLabelSheet(BuildContext context) {
     showCupertinoModalPopup<void>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
-        title: Text('Exportar Etiqueta: ${product.name}'),
-        message: Text(
-          'Código: ${product.code}\nFormato de impresión listo para rotulación de bodega.',
+        title: Text('Exportar Código: ${product.name}'),
+        message: const Text(
+          'Selecciona qué imagen deseas generar y descargar a la memoria del dispositivo:',
         ),
         actions: [
           CupertinoActionSheetAction(
             onPressed: () {
               Navigator.pop(ctx);
-              showCupertinoAlert(
-                context: context,
-                title: 'Etiqueta Exportada',
-                message: 'Se ha generado la plantilla de impresión de etiqueta con código Code 128 y QR para "${product.name}".',
-              );
+              _handleExportImage(context, LabelExportType.qr);
             },
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(CupertinoIcons.printer, size: 20),
+                Icon(CupertinoIcons.qrcode, size: 20),
                 SizedBox(width: 8),
-                Text('Enviar a Impresora Térmica / PDF'),
+                Text('Exportar QR'),
               ],
             ),
           ),
           CupertinoActionSheetAction(
             onPressed: () {
               Navigator.pop(ctx);
-              showCupertinoAlert(
-                context: context,
-                title: 'Código Copiado',
-                message: 'Código único "${product.code}" copiado al portapapeles.',
-              );
+              _handleExportImage(context, LabelExportType.barcode);
+            },
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.barcode, size: 20),
+                SizedBox(width: 8),
+                Text('Exportar Código de Barras'),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleExportImage(context, LabelExportType.both);
+            },
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.square_grid_2x2_fill, size: 20),
+                SizedBox(width: 8),
+                Text('Exportar Ambos (QR y Código de Barras)'),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await Clipboard.setData(ClipboardData(text: product.code));
+              if (context.mounted) {
+                await showCupertinoAlert(
+                  context: context,
+                  title: 'Código Copiado',
+                  message: 'Código único "${product.code}" copiado al portapapeles.',
+                );
+              }
             },
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -112,7 +189,7 @@ class ProductDetailView extends StatelessWidget {
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cerrar'),
+          child: const Text('Cancelar'),
         ),
       ),
     );

@@ -1,22 +1,19 @@
 import 'package:flutter/cupertino.dart';
 
 class AppCupertinoTheme {
-  static const Color primaryColor = Color(0xFF1A73E8); // Google Blue 600
-  static const Color secondaryColor = Color(0xFF5F6368); // Google Grey 700
+  static const Color primaryColor = Color(0xFF1A73E8);
+  static const Color secondaryColor = Color(0xFF5F6368);
 
-  // Colores de estado corporativos
-  static const Color successColor = Color(0xFF1E8E3E); // Google Green 600
-  static const Color warningColor = Color(0xFFF9AB00); // Google Yellow 700
-  static const Color dangerColor = Color(0xFFD93025); // Google Red 600
+  static const Color successColor = Color(0xFF1E8E3E);
+  static const Color warningColor = Color(0xFFF9AB00);
+  static const Color dangerColor = Color(0xFFD93025);
 
-  // Fondos y superficies neutras
-  static const Color scaffoldBackground = Color(0xFFF8F9FA); // Google Grey 50
+  static const Color scaffoldBackground = Color(0xFFF8F9FA);
   static const Color cardBackground = CupertinoColors.white;
-  static const Color separatorColor = Color(0xFFDADCE0); // Google Grey 300
+  static const Color separatorColor = Color(0xFFDADCE0);
 
-  // Textos sobrios Google
-  static const Color textPrimary = Color(0xFF202124); // Google Grey 900
-  static const Color textSecondary = Color(0xFF5F6368); // Google Grey 700
+  static const Color textPrimary = Color(0xFF202124);
+  static const Color textSecondary = Color(0xFF5F6368);
 
   static const CupertinoThemeData themeData = CupertinoThemeData(
     brightness: Brightness.light,
@@ -27,8 +24,7 @@ class AppCupertinoTheme {
     textTheme: CupertinoTextThemeData(
       primaryColor: textPrimary,
       textStyle: TextStyle(
-        fontFamily:
-            'Roboto', // Sustituir por 'Google Sans' si está en tus assets
+        fontFamily: 'Roboto',
         fontSize: 15.0,
         letterSpacing: 0.2,
         color: textPrimary,
